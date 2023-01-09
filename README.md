@@ -6,7 +6,7 @@ Complete monitoring wheater whit battery power
  
 NEWS:
 
-OPTIONS AND FUNCTIONS:
+**FEATURES:**
 - Wheater
   - WIND
     - Speed (km/h)
@@ -47,10 +47,20 @@ OPTIONS AND FUNCTIONS:
 PARTS AND COMPONENT:
 - REQUIRED
    - MCU
-      - [ESP32CAM 3.5€](https://a.aliexpress.com/_mNO3h4e)
-      - [ESP-32S 2.5€](https://a.aliexpress.com/_mtYXh6i) + [Adapter 0.5€](https://a.aliexpress.com/_mNiOE98)
+       - [ESP32CAM 3.5€](https://a.aliexpress.com/_mNO3h4e)
+       - [ESP-32S 2.5€](https://a.aliexpress.com/_mtYXh6i) + [Adapter 0.5€](https://a.aliexpress.com/_mNiOE98)
+   - MODULES
+       - MQ-2 Smoke sensor
+       - 
 - OPTIONAL
   - [OV2640 Camera Module Wide-angle 160 Degree 3.5€](https://a.aliexpress.com/_mLNkjQE)
+  - [1x red LED] + 8x white high britghess Leds
+  - 
+  - Component:
+      - Power Mofset NPN Irfz44N
+      - Resistor 100ohm
+      - Resistor 1k
+
   
 
 
