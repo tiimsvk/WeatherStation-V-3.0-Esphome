@@ -2,7 +2,7 @@
 Complete monitoring wheater whit battery power
 
 DESCRIPTION:
- - Create weather station and monitoring full scale weather and connecting to home assistant
+ - Create weather station and monitoring full scale weather by using ESPHome and connecting to home assistant
  
 NEWS:
 
@@ -43,9 +43,13 @@ OPTIONS AND FUNCTIONS:
 - Camera
    - Monitoring live video
    - Spotlight
-  
  
-  
+PARTS AND COMPONENT:
+- REQUIRED
+   - MCU
+      - ESP32CAM
+.     - ESP-32S 2.5€ + Adapter
+- OPTIONAL
   
 
 
