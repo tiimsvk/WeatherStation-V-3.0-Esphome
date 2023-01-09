@@ -1,7 +1,7 @@
 # WeatherStation-V-3.0-Esphome
 Complete monitoring wheater whit battery power
 
-DESCRIPTION:
+**DESCRIPTION:**
  - Create weather station and monitoring full scale weather by using ESPHome and connecting to home assistant
  
 NEWS:
@@ -47,9 +47,10 @@ OPTIONS AND FUNCTIONS:
 PARTS AND COMPONENT:
 - REQUIRED
    - MCU
-      - ESP32CAM
-.     - ESP-32S 2.5€ + Adapter
+      - [ESP32CAM 3.5€](https://a.aliexpress.com/_mNO3h4e)
+      - [ESP-32S 2.5€](https://a.aliexpress.com/_mtYXh6i) + [Adapter 0.5€](https://a.aliexpress.com/_mNiOE98)
 - OPTIONAL
+  - [OV2640 Camera Module Wide-angle 160 Degree 3.5€](https://a.aliexpress.com/_mLNkjQE)
   
 
 
