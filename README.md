@@ -4,10 +4,10 @@ Complete monitoring wheater whit battery power
 **DESCRIPTION:**
  - Create weather station and monitoring full scale weather by using ESPHome and connecting to home assistant
  
-NEWS:
+**NEWS:**
 
 **FEATURES:**
-- Wheater
+**- Wheater**
   - WIND
     - Speed (km/h)
     - Direction (coordinates)
@@ -33,33 +33,34 @@ NEWS:
     - Particulate Matter pm2.5 (ppm)
     - Active Radiation shield whit fan
 
-- Station
+**- Station**
    - Power on battery and solar
    - Temperature battery and solar panel
    - Full measure electricity and battery monitoring
    - Connection and failure state
    - Wifi signal
 
-- Camera
+**- Camera**
    - Monitoring live video
    - Spotlight
  
-PARTS AND COMPONENT:
+**PARTS AND COMPONENT:**
 - REQUIRED
    - MCU
        - [ESP32CAM 3.5€](https://a.aliexpress.com/_mNO3h4e)
        - [ESP-32S 2.5€](https://a.aliexpress.com/_mtYXh6i) + [Adapter 0.5€](https://a.aliexpress.com/_mNiOE98)
    - MODULES
-       - MQ-2 Smoke sensor
+       - [MQ-2 Smoke sensor](€ 0,92  15%OFF | TZT MQ-2 MQ2 Smoke Gas LPG Butane Hydrogen Gas Sensor Detector Module For Arduino
+https://a.aliexpress.com/_mqTxVIi)
        - 
 - OPTIONAL
   - [OV2640 Camera Module Wide-angle 160 Degree 3.5€](https://a.aliexpress.com/_mLNkjQE)
-  - [1x red LED] + 8x white high britghess Leds
+  - 1x red LED + [8x white high britghess Leds 1.0€](https://a.aliexpress.com/_mLdLj0m)
   - 
-  - Component:
-      - Power Mofset NPN Irfz44N
-      - Resistor 100ohm
-      - Resistor 1k
+- COMPONENT
+  - Power Mofset NPN Irfz44N 0.15€
+  - Resistor 100ohm 0.01€
+  - Resistor 1k 0.01€
 
   
 
