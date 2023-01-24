@@ -32,6 +32,10 @@ Complete monitoring wheater whit battery power
     - CO2 (ppm)
     - Particulate Matter pm2.5 (ppm)
     - Active Radiation shield whit fan
+    
+   - IONIZING RADIATION
+    - Radiation counter (CPM) 
+    - Radiation power Beta and Gamma (µSv/h)
 
 **- Station**
    - Power on battery and solar
