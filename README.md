@@ -33,7 +33,7 @@ Complete monitoring wheater whit battery power
     - Particulate Matter pm2.5 (ppm)
     - Active Radiation shield whit fan
     
-   - IONIZING RADIATION
+  - IONIZING RADIATION
     - Radiation counter (CPM) 
     - Radiation power Beta and Gamma (µSv/h)
 
@@ -51,20 +51,35 @@ Complete monitoring wheater whit battery power
 **PARTS AND COMPONENT:**
 - REQUIRED
    - MCU
-       - [ESP32CAM 3.5€](https://a.aliexpress.com/_mNO3h4e)
-       - [ESP-32S 2.5€](https://a.aliexpress.com/_mtYXh6i) + [Adapter 0.5€](https://a.aliexpress.com/_mNiOE98)
+       - 1x [ESP32CAM 3.5€](https://a.aliexpress.com/_mNO3h4e)
+       - 1x [ESP-32S 2.5€](https://a.aliexpress.com/_mtYXh6i) + [Adapter 0.5€](https://a.aliexpress.com/_mNiOE98)
    - MODULES
-       - [MQ-2 Smoke sensor](€ 0,92  15%OFF | TZT MQ-2 MQ2 Smoke Gas LPG Butane Hydrogen Gas Sensor Detector Module For Arduino
+       - 1x [MQ-2 Smoke sensor](€ 0,92  15%OFF | TZT MQ-2 MQ2 Smoke Gas LPG Butane Hydrogen Gas Sensor Detector Module For Arduino
 https://a.aliexpress.com/_mqTxVIi)
-       - 
+       - 1x [BME280]
+       - 1x [MS-WH-SP-RG Rain gauge]
+
+   
 - OPTIONAL
   - [OV2640 Camera Module Wide-angle 160 Degree 3.5€](https://a.aliexpress.com/_mLNkjQE)
   - 1x red LED + [8x white high britghess Leds 1.0€](https://a.aliexpress.com/_mLdLj0m)
-  - 
+  - 2x [DALLAS DS18B20]
+  - 1x [Fan 5V 50mm 2pin low consumption]
+
 - COMPONENT
-  - Power Mofset NPN Irfz44N 0.15€
-  - Resistor 100ohm 0.01€
-  - Resistor 1k 0.01€
+  Required
+  - 1x Power Mofset NPN Irfz44N 0.15€
+  - 1x Resistor 100ohm 0.01€
+  - 1x Resistor 1k 0.01€
+  - 1x Resistor 1206SMD 10k 0.01€
+  - 1x Resistor 10k 0.01€
+  
+
+  Optional
+  - 1x Resistor 4.7k 0.01€
+  - 1x NPN Darlington TIP122
+  - 1x Resistor 220ohm 0.01€
+  - 1x Resistor 10k 0.01€
 
   
 
