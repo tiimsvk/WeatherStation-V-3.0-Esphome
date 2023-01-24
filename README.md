@@ -7,7 +7,7 @@ Complete monitoring wheater whit battery power
 **NEWS:**
 
 **FEATURES:**
-**- Wheater**
+**Wheater**
   - WIND
     - Speed (km/h)
     - Direction (coordinates)
@@ -37,14 +37,14 @@ Complete monitoring wheater whit battery power
     - Radiation counter (CPM) 
     - Radiation power Beta and Gamma (µSv/h)
 
-**- Station**
+**Station**
    - Power on battery and solar
    - Temperature battery and solar panel
    - Full measure electricity and battery monitoring
    - Connection and failure state
    - Wifi signal
 
-**- Camera**
+**Camera**
    - Monitoring live video
    - Spotlight
  
@@ -58,6 +58,10 @@ Complete monitoring wheater whit battery power
 https://a.aliexpress.com/_mqTxVIi)
        - 1x [BME280]
        - 1x [MS-WH-SP-RG Rain gauge]
+       - 1x [MH-RD Raindrop]
+       - 1x [MHZ19 Intelligent Infrared CO2 Module]
+       - 1x [IKEA VINDRIKTNING Particulate Matter Sensor]
+       - 1x [Level shifter]
 
    
 - OPTIONAL
@@ -72,9 +76,8 @@ https://a.aliexpress.com/_mqTxVIi)
   - 1x Resistor 100ohm 0.01€
   - 1x Resistor 1k 0.01€
   - 1x Resistor 1206SMD 10k 0.01€
-  - 1x Resistor 10k 0.01€
-  
-
+  - 2x Resistor 10k 0.02€
+  - 3x Capacitor ceramic 0.1uF 0.03€
   Optional
   - 1x Resistor 4.7k 0.01€
   - 1x NPN Darlington TIP122
