@@ -67,7 +67,8 @@ Complete monitoring wheater whit battery power
        - 1x [WH-SP-WD wind direction]
        - 1x [Geiger Counter RadiationD-v1.1-CAJOE 30.0€](https://www.aliexpress.com/item/1005004896319865.html)
     - ELECTRICITY
-       - 1x [Solar Panel 18V 25W (50W) 35.0€]([https://www.amazon.com/ECO-WORTHY-Solar-Panel-Module-Charging/dp/B01IFJ73X4/)
+       - 1x [Solar Panel 18V 25W (50W) 35.0€](https://www.amazon.com/ECO-WORTHY-Solar-Panel-Module-Charging/dp/B01IFJ73X4)
+       - 1x [XL4015 5A DC to DC CC CV Lithium Battery Step down Charging Board 1.42€](https://www.aliexpress.com/item/1005003112889788.html)
     - MECHANICAL
 
 
