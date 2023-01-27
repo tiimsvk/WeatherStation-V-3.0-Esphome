@@ -61,11 +61,18 @@ Complete monitoring wheater whit battery power
        - 1x [MHZ19 Intelligent Infrared CO2 Module 22.56€](https://www.aliexpress.com/item/4000212024923.html)
        - 1x [IKEA VINDRIKTNING Particulate Matter Sensor 11.99€ (SK store)](https://www.ikea.com/sk/sk/p/vindriktning-snimac-kvality-vzduchu-80515910/)
        - 1x [Level shifter 0.4€](https://www.aliexpress.com/item/1005002976498419.html)
-       
+       - 1x [GY-302 BH1750 light intensity illumination Sensor 1.10€](https://www.aliexpress.com/item/1005001621873442.html)
+       - 1x [GY-8511 UV Sensor 8.5€](https://www.aliexpress.com/item/32847192530.html)
+       - 1x [WH-SP-WS01 wind speed anemometer]
+       - 1x [WH-SP-WD wind direction]
+       - 1x [Geiger Counter RadiationD-v1.1-CAJOE 30.0€](https://www.aliexpress.com/item/1005004896319865.html)
+    - ELECTRICITY
+       - 1x [Solar Panel 18V 25W (50W) 35.0€]([https://www.amazon.com/ECO-WORTHY-Solar-Panel-Module-Charging/dp/B01IFJ73X4/)
+    - MECHANICAL
 
-   
+
 - OPTIONAL
-  - [OV2640 Camera Module Wide-angle 160 Degree 3.5€](https://a.aliexpress.com/_mLNkjQE)
+  - 1x [OV2640 Camera Module Wide-angle 160 Degree 3.5€](https://a.aliexpress.com/_mLNkjQE)
   - 1x red LED + [8x white high britghess Leds 1.0€](https://a.aliexpress.com/_mLdLj0m)
   - 2x [DALLAS DS18B20]
   - 1x [Fan 5V 50mm 2pin low consumption]
@@ -76,13 +83,14 @@ Complete monitoring wheater whit battery power
   - 1x Resistor 100ohm 0.01€
   - 1x Resistor 1k 0.01€
   - 1x Resistor 1206SMD 10k 0.01€
-  - 2x Resistor 10k 0.02€
-  - 3x Capacitor ceramic 0.1uF 0.03€
+  - 4x Resistor 10k 0.04€
+  - 5x Capacitor ceramic 0.1uF 0.05€
   Optional
   - 1x Resistor 4.7k 0.01€
   - 1x NPN Darlington TIP122
   - 1x Resistor 220ohm 0.01€
   - 1x Resistor 10k 0.01€
+  - 1x Protect Schottky diode SS14 0.01€
 
   
 
