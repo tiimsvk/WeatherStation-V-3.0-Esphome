@@ -1,7 +1,7 @@
 # WeatherStation-V-3.0-Esphome
 Complete monitoring wheater whit battery power
 
-![Main photo of the weather station](images/weather-station_img1.jpg)
+![Main photo of the weather station](image/weather-station_img1.jpg)
 
 **DESCRIPTION:**
  - Create weather station and monitoring full scale weather by using ESPHome and connecting to home assistant
