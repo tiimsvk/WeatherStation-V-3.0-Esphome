@@ -71,6 +71,7 @@ Complete monitoring wheater whit battery power
     - ELECTRICITY
        - 1x [Solar Panel 18V 25W (50W) 35.0€](https://www.amazon.com/ECO-WORTHY-Solar-Panel-Module-Charging/dp/B01IFJ73X4)
        - 1x [XL4015 5A DC to DC CC CV Lithium Battery Step down Charging Board 1.42€](https://www.aliexpress.com/item/1005003112889788.html)
+       - 1x [Relay ADW1203HL 5PINS 3VDC 3.95€](https://a.aliexpress.com/_mODdlKS)
     - MECHANICAL
 
 
@@ -88,6 +89,9 @@ Complete monitoring wheater whit battery power
   - 1x Resistor 1206SMD 10k 0.01€
   - 4x Resistor 10k 0.04€
   - 5x Capacitor ceramic 0.1uF 0.05€
+  - 1x PCB Prototype board 5x7cm 0.25€
+  - 1x PCB Prototype board 4x6cm 0.25€
+
   Optional
   - 1x Resistor 4.7k 0.01€
   - 1x NPN Darlington TIP122
