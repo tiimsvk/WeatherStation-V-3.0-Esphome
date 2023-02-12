@@ -30,8 +30,9 @@ Complete monitoring wheater whit battery power
     - Dew point (°C)
     - Humidity (%)
     - Pressure (hPa)
-    - Smoke (%)
+    - Smoke (ppm)
     - CO2 (ppm)
+    - CO (ppm)
     - Particulate Matter pm2.5 (ppm)
     - Active Radiation shield whit fan
     
