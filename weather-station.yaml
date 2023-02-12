@@ -1,5 +1,8 @@
-# doplniť sleep and wakeup s dazdovym senzorom a lm323 komparatorom
-# opraviť meranie mhz-19
+#-------------------------------------------
+# BUG AND REPAIR
+#-------------------------------------------
+# fix uv state
+# apply nwe formula dew point Tdp =(243.04 × [ln(RH/100) + ( (17.625×T) / (243.04+T) )]) / (17.625 - [ln(RH/100) + ( (17.625×T) / (243.04+T) )])
 
 #-------------------------------------------
 # SUBTITUTIONS - basic definitions and description of the device
@@ -7,8 +10,26 @@
 substitutions:
   device_name: ESP-Weatherstation
   friendly_name: Weather-station
-  created_by: StudioTiiM 2021-2022
-  device_description: "Complete monitoring wheater whit battery power"
+  created_by: StudioTiiM 2021-2023
+  device_description: "A complete battery-powered weather monitoring station"
+
+#-------------------------------------------
+# POWER CONSUMPTION 
+# whit multimeter
+#-------------------------------------------
+# Power consumption 12V
+# First booting MCU + MCU CAM: 300mA
+# Booting MCU: 180mA
+# Heating sensors: 130mA
+# Normal: 40mA
+# Deep sleep: 17mA
+
+# Power consumption 5V
+# First booting MCU + MCU CAM: 510mA
+# Booting MCU after connected to mqtt: 350mA
+# Heating sensors: 330mA
+# Normal: 270mA
+# Deep sleep: 
 
 #-------------------------------------------
 # DEFINE PINS AND VARIABILES
@@ -18,23 +39,57 @@ substitutions:
  # ----- LEDS -----
   # Modul: Status led
    # Specification: 1x red led
-   # Circuit: 10ohm resistor to GPIO
+   # Circuit: 10Ω resistor to GPIO
    # Power consumption: 15mA
   status_led: GPIO02
   # Modul: Spotlight
    # Specification: 8x high brightness white leds
-   # Circuit: 15ohm resistor to 5V / switching whit NPN Darlington TIP122: Gate - 220ohm GPIO / Gate-Source 10k pulldown
+   # Circuit: 15Ω resistor to 5V / switching whit NPN Darlington TIP122: Gate - 220Ω GPIO / Gate-Source 10kΩ pulldown
    # Power consumption: 200mA (1pic = 3.3V 25mA)
   spotlight: GPIO26
 
  # ----- SMOKE SENSOR -----
   # Module: MQ-2 Smoke and Gas Sensor
-   # Specification: Voltage	5V / Load resistance 20 KΩ / Heater resistance	33Ω ± 5% / Heating consumption	<800mw / Sensing Resistance	10 KΩ ~ 60 KΩ / Concentration Range	200 ~ 10000ppm / Preheat Time	Over 24 hour
+   # Specification: Voltage	5V / Load resistance 20kΩ / Heater resistance	33Ω ± 5% / Heating consumption	<800mw / Sensing Resistance	10 KΩ ~ 60 KΩ / Concentration Range	200 ~ 10000ppm / Preheat Time	Over 24 hour
    # Power consumption: preheat 135mA / standby 
    # Settings: time heating and measure min. 100s
-   # RL replace resistor 1k to 10k (9.86)
+   # RL replace resistor 1kΩ to 2kΩ
    # https://circuitdigest.com/microcontroller-projects/arduino-smoke-detector-on-pcb-using-mq2-gas-sensor
-  smoke_pin: GPIO39 #SVP
+   # First stable value after 90s
+  mq2_pin: GPIO39 # SVP
+  # Calibrate:
+  # Look datasheet and MQ-2 Gas Sensor Sensitivity Characteristics in Graph:
+   # https://thestempedia.com/tutorials/interfacing-mq-2-gas-sensor-with-evive/
+   # The graph tells us the concentration of a gas in part per million (ppm) according to the resistance ratio of the sensor (RS/R0).
+    # RS is the resistance of the sensor that changes depending on the concentration of gas.
+    # R0 is the resistance of the sensor at a known concentration without the presence of other gases, or in the fresh air.
+
+    # RS = (Vin - Vout) / Vout
+    
+   # After 15 min. ready "MQ2 - R0" value and repace ro value
+  r0_value: "1.565"
+   
+   # Calculating PPM for a particular gas
+   # Analyze the graph:
+
+    # - The scale of the graph is log-log. This means that in a linear scale, the behavior of the gas concentration with respect to the resistance ratio is exponential.
+    # - The data for gas concentration only ranges from 200 ppm to 10000 ppm.
+    # - Even though the relation between resistance ratio and gas concentration may seem linear, in reality, it is not.
+
+   # First of all, we will treat the lines as if they were linear. This way we can use one formula that linearly relates the ratio and the concentration. 
+   # By doing so, we can find the concentration of a gas at any ratio value even outside of the graph’s boundaries.
+   # The formula we will be using is the equation for a line, but for a log-log scale. The formula for a line is:
+   
+   # Math:
+    # y: X value              y = mx + b   
+    # x: X value              x = 10 ^ {[log(y) - b] / m}
+    # m: Slope of the line    m = log(y/y0) / log(x/x0)
+    # b: Y intercept          b = log(y) - m*log(x)
+
+    # For a log-log scale, the formula looks like this:  
+    #  log(y) = m*log(x) + b  
+
+    # Measure Smoke and CO calculate a defines in the sensor field
 
  # ----- TEMPERATURE / HUMIDITY / PRESSURE SENSORS -----
   # Module: Dallas DS18B20
@@ -42,27 +97,33 @@ substitutions:
    # Power consumption: 50uA
    # Measure: Solar panel and Battery
   dallas_pin: GPIO23
+   # UPDATE AFTER BOOT: 1s
 
-  # module: BME280 - pressure / humidity / temperature (ALT. DHT21 AM2301 750uA; BMP280)
+  # Module: BME280 - pressure / humidity / temperature (ALT. DHT21 AM2301 750uA; BMP280)
    # Specifications: Voltage: 1.8 ~ 5V / Operational Range: Temperature: -40 ~ +85°C Humidity: 0~100% Pressure: 300~1100 hPa / Accuracy: Temperature: +-1°C Humidity: +-3% Pressure: +-1Pa
    # Circuit: Interface: I2C address: SDO LOW : 0x76 (SDO HIGH: 0x77)
    # Power consumption: 0.4mA
+   # UPDATE AFTER BOOT: 1s /if solar panel > 30°C 15s
   
  # ----- FAN RADIATION SHIELD -----
   # Module: 5V Fan 600rpm 50mm (low consumption)
    # Specification: Voltage	5V / Consmption max. 150mA / 600RPM
    # Power consumption: high speed: 150mA / normal speed 100mA / low speed 70mA
-   # Circuit: FAN PWM control / switching whit NPN Darlington TIP122: Gate - 220ohm GPIO / Gate-Source 10k pulldown
+   # Circuit: FAN PWM control / switching whit NPN Darlington TIP122: Gate - 220Ω GPIO / Gate-Source 10kΩ pulldown
   fan_pwm_pin: GPIO19
 
  # ----- RAIN SENSORS -----
   # Module: MS-WH-SP-RG rain gauge
    # Specifications: volume 0.2794 l
-   # Circuit: GPIO-VCC 10k pullup / GPIO-GND 104 capacitor
-  rain_sensor: GPIO18
+   # Circuit: VCC-sensor(reed switch)sensor-GPIO-10kΩ pulldown-GND
+   # Features additional: wake up pin
+  rain_gauge: GPIO25
+
+   # UPDATE AFTER BOOT: 50kΩ = 10s / < 50kΩ = 30s
+
   # Module: MH-RD Raindrops
    # Circuit: GND and ADC pin
-   # Consumption: stadby 0uA / dry 1.4uA / full wet 10mA
+   # Consumption: standby 0uA / dry 1.4uA / full wet 10mA
   rain_drop: GPIO34
    # increasing the lifetime of raindrops module
    # Circuit: GPIO-ADCraindrops 10k resistor - GPIO turn on measure ADC pin
@@ -77,6 +138,7 @@ substitutions:
    # Specifications: Voltage 3.6 ~ 5.5V / Average current < 18 mA /  / Preheat time 3 min / Reponse Time T90 < 60s / Working temperature 0 ~ 50 °C Working humidity 0 ~ 95% RH (No condensation) / Lifespan > 5 years
    # Circuit: Interface UART level 3.3 V
    # Power consumption: preheat 85mA / standby 9mA / pwm heating 90mA (cycle 5-6s 24°C)
+   # UPDATE AFTER BOOT: 50s
 
  # ----- PARTICULATE MATTER SENSOR -----
   # Module: IKEA VINDRIKTNING Particulate Matter Sensor with PM1006 pm 2.5 (whitout original mcu board)
@@ -84,12 +146,14 @@ substitutions:
    # Circuit: Interface UART level 4.5 V baude rate 9600 connected level-shifter reverse TX RX.
    # Consumption: standby 7.6mA
   # Module: original IKEA VINDRIKTNING Fan 5V
+   # Circuit: add protect diode
    # Consumption: 30mA
+   # UPDATE AFTER BOOT: 90s + 5x measure filter 5s = 95s
    
  # ----- REDUCER CONSUMPTION -----
   # "Settings: time heating and measure min 3min delay measure (10x per day)"
    # delay measure and minimal consumption battery: MQ2 smoke sensor and IKEA VINDRIKTNING Particulate Matter Sensor
-   # Circuit: switching whit NPN power mofset IRFZ44N: Gate - 100ohm GPIO / Gate-Source 1k pulldown
+   # Circuit: switching whit NPN power mofset IRFZ44N: Gate - 100Ω GPIO / Gate-Source 1kΩ pulldown
   reducer_consumption_pin: GPIO27
 
  # ----- SUN SENSORS -----
@@ -118,7 +182,7 @@ substitutions:
 
   # Module: WH-SP-WD wind direction
    # Resistors table: 
-   # ANGLE(°)   RESISTOR (kohm)
+   # ANGLE(°)   RESISTOR (kΩ)
    # ---------------------------
    #   0.0      33.00
    #  22.5       6.57
@@ -164,7 +228,7 @@ substitutions:
 
  # ----- CHARGING -----
   # Module: Solar panel 18V
-   # Specification: 18V 50W  
+   # Specification: 18V 25W   (50W alliexpress :D)
    # Type: Monocrystalline 
    # Solar panel dimension
   width_panel: "0.315" # m
@@ -172,29 +236,31 @@ substitutions:
   
   # Module: Charger Step Down XL4015 E1 
    # Specification: Voltage in: 4V ~ 37V out: 1.25V ~ 36V 5A efficiency: ~96% (current standby 20mA) 
-   # Setup: OUT 12.9V/1A (connected protect diode SS34: Voltage Forwarde 0.5V)
+   # Setup: OUT 12.9V/1A (connected protect diode SS34: Voltage Forwarde 0.5V = 12.4V to battery pack)
    
  # ----- BATTERY -----
   # --- old version battery ---
   # Battery: 12V 9Ah 20h max input 13.7V/1.0A (sealed rechargeable acid battery EMOS model OT 9-12)
-  #   Theoretical battery life: current consumption 300mA / Life: 8 Days
+  # Theoretical battery life: current consumption 300mA / Life: 8 Days
 
   # --- new version battery ----
   # Battery: 9x 18650 3.7V/2500mAh 
    # Circuit: 3x parallel 3x series 12.4V/7.5Ah out.
    # Protection 1: BMS 3S 20A hw-375 rev2.3
     # Specification: overcharge 4.25V / discharge 2.5V /overcurrent 22A / Working temperature -40- 85 °C
-    # Consumption: stadby: 20uA
-   # Protection 2: relay HK4001 3A 5V whit PNP BC327 connect 5V lm393 comparator switch power battery/ac power supply input under 9.2V (treshold on trimmer 3.74V)
-  power_status_pin: GPIO04
+    # Consumption: standby: 20uA
+   # Protection 2: Polarized power relay latching relay (Signal two coil) ADW1203HL 3V3 16A protect two diode SS110 and 2xNPN BC337 10kΩ pulldown and 100Ω to GPIO
+    # Specification: battery < 9.4V (3.13V one battery) switch to power supply / if current solar > current mcu switch to battery
+  power_supply_off_pin: GPIO04
+  power_supply_on_pin: GPIO18
   capacite_battery: "7.5"    # 7.5Ah
-  efficiency_charging: "1.4" # efficiency of memory and battery characteristics (20-60%)
+  efficiency_charging: "1.3" # efficiency of memory and battery characteristics (20-60%)
    
  # ----- MEASUREMENT OF ELECTRICITY 
   # Module: INA3221 3CH DC current sensor black board
-   # Specification: Voltage in 26V / Voltage operating 2.7 - 5.5V / Working temperature -40 ~ 125 °C / shunt resistor 0.1 ohm max current I=V/R; I = 0.1638 mV / 0.1 ohm = 1.638 A max
+   # Specification: Voltage in 26V / Voltage operating 2.7 - 5.5V / Working temperature -40 ~ 125 °C / shunt resistor 0.1Ω max current I=V/R; I = 0.1638 mV / 0.1Ω = 1.638 A max
    # Circuit: Interface: I2C address: 0x40
-   # Consumption: stadby 350uA
+   # Consumption: standby 350uA
   
  # ----- LDO REGULATORS -----
   # Module: step down DD2712SA 5V (alt. OKI-78SR-5/1.5)
@@ -202,26 +268,26 @@ substitutions:
   # Module: holtek HT7833 (2x = ESP32cam and ESP32 main mcu)
    # Specification: Voltage in 0-8 out fixed 3.3V 2% / max voltage drop 360mV / current max 0.5A / current standby 0.22mA (datasheet standby current 4uA) / protection: overtemperature; current limiting
 
- # ----- PROTOCOL PINS -----
+#-------------------------------------------
+# VARIABILES
+#-------------------------------------------
+# Update intreval for all sensors
+  update_time: 60s 
+
+#-------------------------------------------
+# PROTOCOLS
+#-------------------------------------------
+ # ----- PROTOCOLS PINS -----
   # i2c
   i2c_sda_pin: GPIO21
   i2c_scl_pin: GPIO22
-  #uart
+  # uart
   uart_rx_pin: GPIO17
   uart_tx_pin: GPIO16
   uart2_rx_pin: GPIO14
   uart2_tx_pin: GPIO13
 
-#-------------------------------------------
-# VARIABILES
-#-------------------------------------------
-
-# Update intreval for all sensors
-  update_time: 120s 
-
-#-------------------------------------------
-# PROTOCOL SETTINGS
-#-------------------------------------------
+ # ----- PROTOCOLS SETTINGS -----
 uart:
   - id: uart2 # ikea vindriktining pm1006
     rx_pin: "$uart2_rx_pin"
@@ -236,27 +302,60 @@ uart:
 i2c:
   sda: "$i2c_sda_pin"
   scl: "$i2c_scl_pin"
-  scan: True
+  scan: false
 
 dallas:
   - pin: "$dallas_pin"
     update_interval: $update_time
 
 #-------------------------------------------
-# ESP - main settings
+# ESP - MAIN SETTINGS
 #-------------------------------------------
 esphome:
   name: weather-station
   project:
     name: "studiotiim.weather_station"
-    version: 3.0.0
+    version: 3.1.0
+  platformio_options:
+    board_build.f_cpu: 160000000L # set cpu clock 160mhz
   on_boot:
-    priority: -200
+    - priority: 900
+      then:
+        # Find how to esp wake up (deep sleep cycle or rtc pin wake up)
+        # Rain-gauge add one measuring when is wake up whit gauge pin
+        lambda: |-
+          id(wake_up_pin) = ((log(esp_sleep_get_ext1_wakeup_status()))/log(2));;
+          esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON); //INTERNAL PD
+
+    - priority: 600
+      then:
+        #- lambda: id(deep_sleep_prevent_rainfall).publish_state(true);
+        - lambda: id(deep_sleep_prevent).publish_state(false); # on boot send template state fals
+
+    - priority: -200 # when everithing should by inicialized
+      then:
+        - switch.turn_on: resistance_bias # turn on resistance on raindrop sensor
+        # - if: 
+            # condition:
+            #   mqtt.connected: # send online state when mqtt is connected to wifi and server
+            #then:
+        - text_sensor.template.publish:  # Send online state when wifi is connected 
+            id: online_status
+            state: "Online"
+    - priority: -400  # delay so that the device is not overloaded at startup
+      then:
+        - delay: 5s
+        - switch.turn_on: switch_reducer_consumption # turn on measure pm1006 and mq2 sensor less load when booting
+        - text_sensor.template.publish: # second send online 
+            id: online_status
+            state: "Online"
+
+  on_shutdown: # send offline state when mcu power off or go to deep sleep
+    priority: -801.0 # tested more settings the server does not always receive the value
     then:
-      - switch.turn_on: resistance_bias
-      - component.update: temperature_temp
-      - component.update: pressure_temp
-      - component.update: humidity_temp
+      - text_sensor.template.publish:
+          id: online_status
+          state: "Offline"
 
 esp32:
   board: esp32dev
@@ -264,23 +363,41 @@ esp32:
     type: arduino
 
 logger:
-#api:
 
+#-------------------------------------------
+# MQTT
+#-------------------------------------------
 mqtt:
   broker: '192.168.31.212'
   username: !secret mqtt_username
   password: !secret mqtt_password
   discovery: true
-#  discovery_retain: false
 
-# no message when binary sensor platfrom:status not working
+  # online first message
   birth_message:
-    topic: $device_name/status
+    topic: $device_name/status_on
     payload: online
+  # drop connected message
   will_message:
-    topic: $device_name/status1
+    topic: $device_name/status_unaiavalable
+    payload: unavailable
+  # offline last message
+  shutdown_message:
+    topic: $device_name/status_off
     payload: offline
-#  on_message:
+  # OTA message
+  on_message:
+    - topic: $device_name/ota_mode
+      payload: 'ON'
+      then:
+        - deep_sleep.prevent: deep_sleep_component
+        - logger.log: "OTA blocking deep sleep"
+
+    - topic: $device_name/ota_mode
+      payload: 'OFF'
+      then:
+        - logger.log: "Ota finished back to deep sleep allow"
+        - deep_sleep.allow: deep_sleep_component
 
 ota:
   password: !secret ota_pass
@@ -300,26 +417,83 @@ wifi:
 captive_portal:
 
 #-------------------------------------------
+# DEEP SLEEP COMPONENT
+#-------------------------------------------
+deep_sleep:
+  run_duration: 150s # all sensor send state (in time 100s)
+  sleep_duration: 13min
+  #sleep_duration: 2min # testing time
+  id: deep_sleep_component
+  esp32_ext1_wakeup: 
+    pins: 
+      - $rain_gauge
+    mode: ANY_HIGH 
+  #wakeup_pin_mode: KEEP_AWAKE # when is high no deepsleep enter
+
+#-------------------------------------------
+# SCRIPTS
+#-------------------------------------------
+script:
+#-------------------------------------------
+# Deep sleep script allow
+# prevent deep sleep when raindrop detected
+# if raindrop sensor is wet, it's probably raining, a rain gauge can record the amount of water
+# after raindrop sensor dry go to deep sleep after 100s
+#-------------------------------------------
+  - id: deep_sleep_script 
+    mode: single
+    then:
+      - logger.log: 
+          format: "ALLOW DEEPSLEEP + 95s"
+          level: warn
+      - delay: 95s
+      - text_sensor.template.publish:
+          id: online_status
+          state: "Offline"
+      - logger.log: 
+          format: "BEGIN DEEPSLEEP + 5s"
+          level: warn
+      - delay: 5s
+      - deep_sleep.allow: deep_sleep_component
+
+#-------------------------------------------
 # GLOBALS
 #-------------------------------------------
 globals:
 #-------------------------------------------
 # RESTORE VALUE BME280 module
 #-------------------------------------------
-   - id: temp_global
-     type: float
-     restore_value: yes
-     initial_value: '20.0'
+  - id: temp_global
+    type: float
+    restore_value: yes
+    initial_value: '20.0'
 
-   - id: humidity_global
-     type: float
-     restore_value: yes
-     initial_value: '50.0'
+  - id: humidity_global
+    type: float
+    restore_value: yes
+    initial_value: '50.0'
 
-   - id: pressure_global
-     type: float
-     restore_value: yes
-     initial_value: '1000'
+  - id: pressure_global
+    type: float
+    restore_value: yes
+    initial_value: '1000'
+
+#-------------------------------------------
+# RESTORE VALUE power state (battery/power supply switch)
+#-------------------------------------------
+  - id: power_state_global
+    type: bool
+    restore_value: yes
+    initial_value: "false"
+
+#-------------------------------------------
+# RESTORE VALUE esp_sleep_get_ext1_wakeup_status
+# Rain-gauge add one measuring when is wake up whit gauge pin
+#-------------------------------------------
+  - id: wake_up_pin
+    type: uint64_t
+    restore_value: no
+    initial_value: '0'
 
 #-------------------------------------------
 # STATUS LED
@@ -328,12 +502,24 @@ globals:
 status_led:
   pin:
     number: ${status_led}
-#    inverted: true
 
 #-------------------------------------------
 # TEXT SENSORS
 #-------------------------------------------
 text_sensor:
+#-------------------------------------------
+# Online state mcu
+# bug no send online or offline does always state 
+#-------------------------------------------
+  - platform: template
+    id: online_status
+    name: "${friendly_name} Status"
+    lambda: |-
+      return {"Loading"};
+    icon: "mdi:power-standby"
+    update_interval: never
+    entity_category: diagnostic
+
 #-------------------------------------------
 # Rain drop text sensor 
 # ... on boot loading
@@ -376,6 +562,20 @@ text_sensor:
 #-------------------------------------------
 sensor:
 #-------------------------------------------
+# Internal board esp temperature
+#-------------------------------------------
+  - platform: template
+    id: temp
+    name: "${friendly_name} Temperature MCU"
+    lambda: return temperatureRead();
+    filters:
+      - filter_out: 53.3 # bug 53.3 send state only 
+    unit_of_measurement: "°C"
+    update_interval: "$update_time"
+    icon: mdi:thermometer
+    entity_category: diagnostic
+
+#-------------------------------------------
 # Wifi signal component
 #-------------------------------------------
   - platform: wifi_signal
@@ -395,49 +595,117 @@ sensor:
 # Smoke detector - MQ-2 Smoke and Gas Sensor
 #-------------------------------------------
   - platform: adc
-    name: "${friendly_name} Smoke RAW"
-    pin: "$smoke_pin"
-    update_interval: "never"
+    name: "${friendly_name} MQ2 - RAW"
+    pin: "$mq2_pin"
+    update_interval: "1s"
     attenuation: 11db
     accuracy_decimals: 3
-    id: smoke_raw
+    id: mq2_raw
     icon: "mdi:smoke"
-    device_class: carbon_dioxide
-
-  - platform: adc
-    name: "${friendly_name} Smoke"
-    pin: "$smoke_pin"
-    update_interval: "never"
-    attenuation: 11db
-    accuracy_decimals: 1
-    id: smoke
     filters:
-      - lambda: return x * (5/3.3); # calibrate whitout divide
-      - calibrate_polynomial:
-          degree: 2
-          datapoints:
-            - 3.3 -> 10000.0
-            - 1.58 -> 200.0
-            - 1.56 -> 0.0
-      - lambda: 'return min((float)10000.0, x);'
-      - lambda: 'return max((float)0.0, x);'
-      - quantile:
-          window_size: 5
-          send_every: 5
-          send_first_at: 5
-          quantile: .5
-    unit_of_measurement: "ppm"
-    icon: "mdi:smoke"
-    device_class: carbon_dioxide
+      - median:
+          window_size: 4
+          send_every: 4
+          send_first_at: 4
+    entity_category: config
+    on_value:
+      then:
+        - component.update: mq2_ro
+        - component.update: mq2_smoke
+        - component.update: mq2_co
 
+#-------------------------------------------
+# MQ2 - RO 
+# read when first started and preheated for 24 hours, read the value after 15 minutes
+#-------------------------------------------
+  - platform: template
+    name: "${friendly_name} MQ2 - R0"
+    id: mq2_ro
+    accuracy_decimals: 4
+    update_interval: never
+    icon: "mdi:smoke"
+    unit_of_measurement: "R0"
+    entity_category: config
+    lambda: |-
+      const float air_rs_ro = 9.8;                                                // From the graph, we can see that the resistance ratio in fresh air is a constant: RS / R0 = 9.8
+      const float vdc = id(voltage_out).state;                                    // 5.0V or input sensor vdc to esp32
+      // RO= ((5.0 - adc                ) / adc                ) / 9.8            // formula in excel
+      return ((vdc - id(mq2_raw).state) / id(mq2_raw).state) / air_rs_ro;     // 
+
+    # In the table given below, you can find the value of m and b for different gases.
+    # --------------------------------------------------------------
+    # Gas       Value   Value     Value         m             b
+    #           at 200  at 10000  at 5000  
+    # --------------------------------------------------------------
+    # H2        2.1     0.33      0.460    -0.473054470  1.412572126
+    # LPG       1.6     0.27      0.370    -0.454838059  1.250634060
+    # Methane   3.0     0.70      0.940    -0.372003751  1.349158571
+    # CO        5.1     1.35      1.800    -0.339756680  1.512022272
+    # Alcohol   2.8     0.65      0.850    -0.373311285  1.310286169
+    # Smoke     3.4     0.60      0.950    -0.443402570  1.617856412
+    # Propane   1.7     0.28      0.385    -0.461038681  1.290828982
+    # --------------------------------------------------------------
+
+#-------------------------------------------
+# MQ2 - Smoke
+#-------------------------------------------
+  - platform: template
+    name: "${friendly_name} MQ2 - Smoke"
+    id: mq2_smoke
+    unit_of_measurement: ppm
+    accuracy_decimals: 0
+    update_interval: never
+    device_class: carbon_dioxide
+    icon: "mdi:smoke"
+    lambda: |-      
+      const float x_left = 200.0;    // straight line for smoke x min value
+      const float y_up = 3.4;        // straight line for smoke y max value
+      const float x_right = 10000.0; // straight line for smoke x max value
+      const float y_down = 0.6;      // straight line for smoke y min value
+      
+      const float x_middle = 5000.0; // straight line for smoke middle point
+      const float y_middle = 0.95;   // straight line for smoke middle point
+      
+      const float vdc = id(voltage_out).state - 0.1;         // 5.0V or input sensor vdc to esp32
+       
+      //=   POWER(10; (LOG10 (((5.0 - ADC                ) / ADC                ) / 0,4)- (LOG10 (0,95)     - (LOG10 (0,6    / 3,4 ) / LOG10 (10000   / 200   )) * LOG10 (5000    ))) / (LOG10 (0,6    / 3,4 ) / LOG10 (10000   / 200   )))      formula in excel
+      return powf(10, (log10f(((vdc - id(mq2_raw).state) / id(mq2_raw).state) / ${r0_value}) - (log10f(y_middle) - (log10f(y_down / y_up) / log10f(x_right / x_left)) * log10f(x_middle))) / (log10f(y_down / y_up) / log10f(x_right / x_left)));
+    filters:
+      - lambda: 'return min((float)10000.0, x);'
+      
+#-------------------------------------------
+# MQ2 - CO
+#-------------------------------------------
+  - platform: template
+    name: "${friendly_name} MQ2 - CO"
+    id: mq2_co
+    unit_of_measurement: ppm
+    accuracy_decimals: 0
+    update_interval: never
+    device_class: carbon_dioxide
+    icon: "mdi:smoke"
+    lambda: |-
+      const float x_left = 200.0;    // straight line for smoke x min value
+      const float y_up = 5.1;        // straight line for smoke y max value
+      const float x_right = 10000.0; // straight line for smoke x max value
+      const float y_down = 1.35;     // straight line for smoke y min value
+      
+      const float x_middle = 5000.0; // straight line for smoke middle point
+      const float y_middle = 1.8;    // straight line for smoke middle point
+      
+      const float vdc = id(voltage_out).state - 0.1;         // 5.0V or input sensor vdc to esp32
+      
+      return powf(10, (log10f(((vdc - id(mq2_raw).state) / id(mq2_raw).state) / ${r0_value}) - (log10f(y_middle) - (log10f(y_down / y_up) / log10f(x_right / x_left)) * log10f(x_middle))) / (log10f(y_down / y_up) / log10f(x_right / x_left)));
+    filters:
+      - lambda: 'return min((float)10000.0, x);'
 #-------------------------------------------
 # DALLAS temperature sensor - DS18B20 
 # connected 4.7k to VCC 
 #-------------------------------------------
-
 # Temperature solar panel
   - platform: dallas
     address: 0x3bf4f1871e64ff28
+    
     name: "${friendly_name} Temperature Solar Panel"
     id: temp_solar
     entity_category: diagnostic
@@ -453,7 +721,7 @@ sensor:
           then: 
             - fan.turn_on:
                 id: radiationshield_fan
-                speed: 80
+                speed: 95 # + 100mA 15s
             - delay: 15s
             - fan.turn_off:
                 id: radiationshield_fan
@@ -467,7 +735,7 @@ sensor:
             
 # Temperature battery
   - platform: dallas
-    address: 0xc0f701720e64ff28
+    address: 0x7111dafb0264ff28
     name: "${friendly_name} Temperature Battery"
     id: temp_battery
     unit_of_measurement: "°C"
@@ -507,7 +775,6 @@ sensor:
               value: !lambda 'return x;'
     address: 0x76
     update_interval: 14s
-    
 
 #-------------------------------------------
 # Template - Temperature humidity pressure
@@ -552,13 +819,15 @@ sensor:
 # Wind Speed - WH-SP-WS01
 #
 # Specification for calculating speed
-# Number of pulses by revolution            pulse_revolution = 2 pulses
+# Number of pulses by revolution            pulse_revolution = 1 pulses (sensor has 2 magnet 2 pulses. but 1Hz give good values)
 # Blade radius to center                    radius           = 0.09 m
 # Circumference in meter                    circ_m           = radius * 2 * π = 0.09 * 2 * 3.14 = 0.5652 m
-# Rotation per second                       rotation         = pulse / pulse_revolution / 60 = 1 / 2 / 60 = 0.00833
+# Rotation per second                       rotation         = pulse / pulse_revolution / 60 = 1 / 1 / 60 = 0.01667
 # Calibration factor compensate friction    factor           = 1.18 (you can adjust it)
-# Meter per second                          mps              = factor * circ_m * rotation = 1.18 * 0.5652 * 0.00833 = 0.0055578 m/s
-# kilometer per hour                        kmh              = mps * 3.6 = 0.02 km/h
+# Meter per second                          mps              = factor * circ_m * rotation = 1.18 * 0.5652 * 0.01667 = 0.01111 m/s
+# kilometer per hour                        kmh              = mps * 3.6 = 0.04 km/h
+# 
+# datasheet 2.4km/h per second 
 #-------------------------------------------
   - platform: pulse_counter
     pin: 
@@ -575,6 +844,7 @@ sensor:
     internal_filter: 13us
     filters:
       - lambda: return x * ((${factor} * (${radius} * 2 * ${math_pi}) * 1 / ${pulse_revolution} / 60) * 3.6 ); 
+      # multiply: 0.04
 
 #-------------------------------------------
 # Wind direction - WH-SP-WD
@@ -733,33 +1003,36 @@ sensor:
     name: "${friendly_name} UV Intensity"
     update_interval: "$update_time"
     filters:
-      # No value lower than 0
-      - lambda: 'return max((float)0.99, x);'
-      # No value greater than $max_resistance
+      #- lambda: 'return max((float)0.99, x);' # original in datasheet minimum 0.99
+      - lambda: 'return max((float)1.03, x);'  # measure more time min. 0.99-1.03
       - lambda: 'return min((float)2.8, x);'
     unit_of_measurement: 'mW/cm²'
     on_value:
       then:
         component.update: uv_index
-#    device_class: Irradiance
+    icon: 'mdi:sunglasses'
+#    device_class: irradiance # bug
 
   - platform: template
     name: "${friendly_name} UV Index"
     id: uv_index
     lambda: |-
-       return ((id(adcuv).state - 1.0) * (15.0 - 0.0) / (2.8 - 1.0) + 0.0);
-       // calibrate whit hydrometeorology institute
+       return ((id(adcuv).state - 1.03) * (15.0 - 0.0) / (2.8 - 1.0) + 0.0);
        // return ((id(adcuv).state - 0.99) * (15.0 - 0.0) / (2.8 - 0.99) + 0.0);
     update_interval: "never"
     unit_of_measurement: "UV"
     icon: 'mdi:sunglasses'
     filters:
-      - calibrate_linear:
-          # Map 0.0 (from sensor) to 0.0 (true value)
-          - 0.2 -> 0.0
-          - 0.49 -> 0.1
+      - calibrate_polynomial:
+         degree: 3
+         datapoints:
+          # calibrate whit hydrometeorology institute still measure and calibrate sensor not final 
+          - 0.0 -> 0.0
+          - 0.1 -> 0.0
           - 1.4 -> 5.0
           - 3.5 -> 8.0
+          - 10.0 -> 14.5
+          - 15.0 -> 15.0
       - lambda: 'return max((float)0, x);'
  
 #-------------------------------------------
@@ -771,19 +1044,18 @@ sensor:
     temperature:
       name: "${friendly_name} Temperature CO2"
       accuracy_decimals: 1
-    #update_interval: "$update_time"
-    update_interval: "10s"
-    automatic_baseline_calibration: true
+    update_interval: "$update_time"
+    # abc mhz calibration switch turn on/off automatic baseline calibration 
+    # automatic_baseline_calibration: True
     uart_id: uart1
     id: mhz19_co2
-
 
 #-------------------------------------------
 # Electricity component - INA3221 3CH DC current sensor
 #-------------------------------------------
   - platform: ina3221
     address: 0x40
-    #solar panel
+    # solar panel
     channel_1:
       shunt_resistance: 0.1 ohm
       current:
@@ -792,7 +1064,7 @@ sensor:
         id: current_solar
         entity_category: diagnostic
         filters:
-          - multiply: 1000
+          - multiply: 1000 # convert A to mA 
           - median:
               window_size: 3
               send_every: 3
@@ -817,7 +1089,7 @@ sensor:
         id: current_battery
         entity_category: diagnostic
         filters:
-          - multiply: 1000
+          - multiply: 1000 # convert A to mA 
           - median:
               window_size: 3
               send_every: 3
@@ -856,73 +1128,126 @@ sensor:
                 else:
                   - if:
                       condition:
-                        and:
-                          - binary_sensor.is_on: power_state
-                          - sensor.in_range:
-                              id: battery_voltage
-                              below: 1.0
-                      then: 
-                        - text_sensor.template.publish:
-                            id: text_battery_condition
-                            state: "Supply / No Battery"
-                  - if:
-                      condition:
-                        - binary_sensor.is_on: power_state
-                        - sensor.in_range:
-                            id: battery_voltage
-                            above: 1.0
-                      then: 
-                        - text_sensor.template.publish:
-                            id: text_battery_condition
-                            state: "Power supply"
-                      else:
-                        - if:
+                        lambda: "return (id(current_solar).state) > (id(current_mcu).state);"
+                      then:
+                        - switch.turn_on: power_supply_off
+                        - if: 
                             condition:
-                              lambda: "return (id(current_solar).state) > (id(current_mcu).state);"
+                              - sensor.in_range:
+                                  id: battery_voltage
+                                  below: 10.0
                             then:
                               - text_sensor.template.publish:
                                   id: text_battery_condition
-                                  state: "CHARGE"
+                                  state: "Charging / LOW"
                             else:
-                              - if:
-                                  condition:
-                                    sensor.in_range:
+                              - text_sensor.template.publish:
+                                  id: text_battery_condition
+                                  state: "Charging"
+                      else:
+                        if:
+                          condition:
+                            - binary_sensor.is_on: power_state
+                          then:
+                            - if:
+                                condition:
+                                  - sensor.in_range:
                                       id: battery_voltage
-                                      above: 12.4
-                                  then:
-                                    - text_sensor.template.publish:
-                                        id: text_battery_condition
-                                        state: "FULL"
-                              - if:
-                                  condition:
-                                    sensor.in_range:
-                                      id: battery_voltage
-                                      below: 12.4
-                                      above: 9.0
-                                  then:
-                                    - text_sensor.template.publish:
-                                        id: text_battery_condition
-                                        state: "OK"
-                              - if:
-                                  condition:
-                                    sensor.in_range:
-                                      id: battery_voltage
-                                      below: 9.0
-                                      above: 8.4
-                                  then:
-                                    - text_sensor.template.publish:
-                                        id: text_battery_condition
-                                        state: "LOW"
-                              - if:
-                                  condition:
-                                    sensor.in_range:
+                                      below: 4.0
+                                then:
+                                  - text_sensor.template.publish:
+                                      id: text_battery_condition
+                                      state: "Supply / No battery"
+                            - if:
+                                condition:
+                                  - sensor.in_range:
                                       id: battery_voltage
                                       below: 8.4
-                                      above: 1.0
-                                  then:
-                                    - text_sensor.template.publish:
-                                        id: text_battery_condition
-                                        state: "CRITICAL LOW"
+                                      above: 4.0
+                                then:
+                                  - text_sensor.template.publish:
+                                      id: text_battery_condition
+                                      state: "Supply / Critical Low"
+                            - if:
+                                condition:
+                                  - sensor.in_range:
+                                      id: battery_voltage
+                                      below: 10.5
+                                      above: 8.4
+                                then:
+                                  - text_sensor.template.publish:
+                                      id: text_battery_condition
+                                      state: "Supply / Low"
+                            - if:
+                                condition:
+                                  - sensor.in_range:
+                                      id: battery_voltage
+                                      below: 12.4
+                                      above: 10.5
+                                then:
+                                  - text_sensor.template.publish:
+                                      id: text_battery_condition
+                                      state: "Supply / Normal"
+                            - if:
+                                condition:
+                                  - sensor.in_range:
+                                      id: battery_voltage
+                                      above: 12.4
+                                then:
+                                  - text_sensor.template.publish:
+                                      id: text_battery_condition
+                                      state: "Supply / Full"
+                          else:
+                            - if:
+                                condition:
+                                  - sensor.in_range:
+                                      id: battery_voltage
+                                      below: 8.4
+                                then:
+                                  - switch.turn_on: power_supply_on
+                                  - text_sensor.template.publish:
+                                      id: text_battery_condition
+                                      state: "Critical Low"
+                            - if:
+                                condition:
+                                  - sensor.in_range:
+                                      id: battery_voltage
+                                      below: 9.5
+                                      above: 8.4
+                                then:
+                                  - switch.turn_on: power_supply_on
+                                  - text_sensor.template.publish:
+                                      id: text_battery_condition
+                                      state: "Low"
+                            - if:
+                                condition:
+                                  - sensor.in_range:
+                                      id: battery_voltage
+                                      below: 10.0
+                                      above: 9.5
+                                then:
+                                  - text_sensor.template.publish:
+                                      id: text_battery_condition
+                                      state: "Low"
+                            - if:
+                                condition:
+                                  - sensor.in_range:
+                                      id: battery_voltage
+                                      below: 12.4
+                                      above: 10.0
+                                then:
+                                  - text_sensor.template.publish:
+                                      id: text_battery_condition
+                                      state: "Normal"
+                            - if:
+                                condition:
+                                  - sensor.in_range:
+                                      id: battery_voltage
+                                      above: 12.4
+                                then:
+                                  - text_sensor.template.publish:
+                                      id: text_battery_condition
+                                      state: "Full"
 
       shunt_voltage:
         name: "${friendly_name} Shunt Voltage Battery"
@@ -952,6 +1277,7 @@ sensor:
       bus_voltage:
         name: "${friendly_name} Voltage Out"
         entity_category: diagnostic
+        id: voltage_out
       shunt_voltage:
         name: "${friendly_name} Shunt Voltage Out"
         internal: true
@@ -967,6 +1293,7 @@ sensor:
     lambda: "return id(current_out).state;"
     update_interval: never
     entity_category: diagnostic
+    internal: True
 
 #-------------------------------------------
 # Total energy
@@ -974,10 +1301,11 @@ sensor:
   - platform: total_daily_energy
     name: "${friendly_name} Solar Energy"
     power_id: solar_power
+    icon: "mdi:solar-power"
     on_value:
       then:
         - component.update: solar_radia
-    accuracy_decimals: 3
+    accuracy_decimals: 2
 
 #-------------------------------------------
 # Solar radiation component
@@ -991,7 +1319,7 @@ sensor:
     unit_of_measurement: "(W/m²)/day"
     id: solar_radia
     lambda: |-
-      return (id(solar_power).state * (1 / (0.55 * 0.55)) * 24);
+      return (id(solar_power).state * (1 / ($width_panel * $height_panel)) * 24);
     update_interval: never
     accuracy_decimals: 0
 
@@ -1004,8 +1332,8 @@ sensor:
       return (id(battery_voltage).state);
     filters:
       - calibrate_linear:
-          - 12.0 -> 100
-          - 9.19 -> 0
+          - 12.54 -> 100
+          - 9.5 -> 0
       - lambda: 'return min((float)100.0, x);'
       - lambda: 'return max((float)0.0, x);'
     accuracy_decimals: 0
@@ -1033,6 +1361,7 @@ sensor:
           send_every: 5
           send_first_at: 5
           quantile: .5
+
     accuracy_decimals: 3
     update_interval: never
     entity_category: diagnostic
@@ -1045,10 +1374,12 @@ sensor:
           sensor.in_range:
             id: current_battery
             below: 0.0
+        # CHARGING
         then:
           - sensor.template.publish:
               id: battery_charging_time
               state: !lambda "return ((${capacite_battery} - (${capacite_battery} / 100 * id(battery).state)) * ${efficiency_charging}) / id(current_value).state;"
+        # DISCHARGING
         else:
           - sensor.template.publish:
               id: battery_charging_time
@@ -1064,6 +1395,10 @@ sensor:
     device_class: battery
     id: battery_charging_time
     icon: mdi:battery-clock
+    filters:
+      # filter range for a clear graph statistic
+      - lambda: 'return min((float)120.0, x);'
+      - lambda: 'return max((float)-120.0, x);'
 
 #-------------------------------------------
 # IKEA VINDRIKTNING Particulate Matter Sensor with PM1006 inside
@@ -1075,15 +1410,15 @@ sensor:
       name: "${friendly_name} PM2.5"
       filters:
       - median:
-          window_size: 5
-          send_every: 5
-          send_first_at: 5
+          window_size: 4
+          send_every: 4
+          send_first_at: 4
     update_interval: "never"
     uart_id: uart2
 
 #-------------------------------------------
 # Rain drops sensor MH-RD Raindrops
-# Dry     = 50000 Ω
+# Dry     > 49000 Ω
 # Wet     < 49000 Ω
 # Raining < 4000  Ω
 #-------------------------------------------
@@ -1091,6 +1426,7 @@ sensor:
   - platform: adc
     id: rain_drop_adc
     pin: "$rain_drop"
+    name: "${friendly_name} Rainfall Drop Raw"
     attenuation: 11db
     internal: true
     # It is important to have a low update interval so that
@@ -1114,11 +1450,11 @@ sensor:
     icon: "mdi:waterfall"
     unit_of_measurement: 'kΩ'
     filters:
-      # No value lower than 0
+      # No value lower than 1 000ohm
       - lambda: 'return max((float)1000, x);'
-      # No value greater than $max_resistance
-      - lambda: 'return min((float)50000, x);'
-      - multiply: 0.001
+      # No value greater than 80 000ohm
+      - lambda: 'return min((float)80000, x);'
+      - multiply: 0.001 # convert ohm to kiloohm
     accuracy_decimals: 1
     on_value:
       - if:
@@ -1130,33 +1466,67 @@ sensor:
             - text_sensor.template.publish:
                 id: rain_status
                 state: "Dry"
+            - delay: 5s
+            - if:
+                condition:
+                  and:
+                    - binary_sensor.is_off: deep_sleep_prevent
+                    - binary_sensor.is_off: deep_sleep_prevent_rainfall
+                then:
+                  - script.execute: deep_sleep_script
+                else:
+                  - if:
+                      condition:
+                        or:
+                          - binary_sensor.is_on: deep_sleep_prevent
+                          - binary_sensor.is_on: deep_sleep_prevent_rainfall
+                      then:
+                        - script.stop: deep_sleep_script
+                        - deep_sleep.prevent: deep_sleep_component
+                        - logger.log: 
+                            format: "RAINGAUGE OR PRESS PREVENT DEEPSLEEP"
+                            level: warn
           else:
-            if:
-              condition:
-                sensor.in_range:
-                  id: resistance_sensor_rain
-                  above: 4.000
-                  below: 49.000
-              then:
-                - text_sensor.template.publish:
-                    id: rain_status
-                    state: "Wet"
-              else:
-                - text_sensor.template.publish:
-                    id: rain_status
-                    state: "Raining"                
+            - if:
+                condition:
+                  sensor.in_range:
+                    id: resistance_sensor_rain
+                    above: 4.000
+                    below: 49.000
+                then:
+                  - text_sensor.template.publish:
+                      id: rain_status
+                      state: "Wet"
+                else:
+                  - text_sensor.template.publish:
+                      id: rain_status
+                      state: "Raining"
+            - if:
+                condition:
+                  or:
+                    - sensor.in_range:
+                        id: resistance_sensor_rain
+                        below: 49.000
+                    - binary_sensor.is_on: deep_sleep_prevent_rainfall
+                    - binary_sensor.is_on: deep_sleep_prevent
+                then:
+                  - script.stop: deep_sleep_script
+                  - deep_sleep.prevent: deep_sleep_component
+                  - logger.log: 
+                      format: "WET MEASURE PREVENT DEEPSLEEP"
+                      level: warn
 
 #-------------------------------------------
-# Rain sensor component - MS-WH-SP-RG
+# Rain gauge sensor - MS-WH-SP-RG
 #-------------------------------------------
   - platform: pulse_counter
     pin:
-      number: "$rain_sensor"
-      mode: INPUT_PULLUP
+      number: "$rain_gauge"
+      mode: INPUT_PULLDOWN
     unit_of_measurement: 'mm/min'
-    name: "${friendly_name} Rainfall"
-    icon: 'mdi:weather-rainy'
-    id: rain_gauge
+    name: "${friendly_name} Rainfall raw"
+    #icon: 'mdi:weather-rainy'
+    id: rain_gauge_raw
     count_mode:
       rising_edge: DISABLE
       falling_edge: INCREMENT
@@ -1166,17 +1536,52 @@ sensor:
     # volume one pulse 0.2794 l
       - multiply: 0.2794
     accuracy_decimals: 2
+    on_value:
+      then:
+        - sensor.template.publish:
+            id: rain_gauge
+            state: !lambda "return id(rain_gauge_raw).state;"
 
-  - platform: total_daily_energy
-    name: "${friendly_name} Rainfall Daily"
-    power_id: rain_gauge
-    unit_of_measurement: 'mm'
+  - platform: template
+    name: "${friendly_name} Wake Up Pin"
+    id: wake_up_pin_temp
+    accuracy_decimals: 0
+    internal: True
+    lambda: |-
+      return (id(wake_up_pin));
+    on_value:
+      if:
+        condition:
+          sensor.in_range:
+            id: wake_up_pin_temp
+            below: 30
+        then:
+          - sensor.template.publish:
+              id: rain_gauge
+              state: 0.2794
+        
+  - platform: template
+    name: "${friendly_name} Rainfall"
+    id: rain_gauge
     icon: 'mdi:weather-rainy'
-    # x60 To convert to aggregated rain amount
     filters:
-      - multiply: 60
+      lambda: if (isnan(x)) {  return 0.0; } return x;
+    unit_of_measurement: 'mm/min'
     accuracy_decimals: 2
-    device_class: distance
+    #expire_after: 60s
+    
+    
+# Can not be when deep sleep enable
+#  - platform: total_daily_energy
+#    name: "${friendly_name} Rainfall Daily"
+#    power_id: rain_gauge
+#    unit_of_measurement: 'mm'
+#    icon: 'mdi:weather-rainy'
+#    # x60 To convert to aggregated rain amount
+#    filters:
+#      - multiply: 60
+#    accuracy_decimals: 2
+#    device_class: distance
 
 #-------------------------------------------
 # Pulse counter - Geiger module 
@@ -1193,69 +1598,144 @@ sensor:
 # inverse 0.00596598639455782312925170068027
 # https://sites.google.com/site/diygeigercounter/technical/gm-tubes-supported (method 2)
 #-------------------------------------------
+
+  # CPM
   - platform: pulse_counter
     pin: "$geiger_pin"
     id: geigercounter
-    name: "${friendly_name} Radiation_Raw"
-#    update_interval: 60s
-    unit_of_measurement: 'µSv/h'
-    accuracy_decimals: 3
+    internal: true
+    #name: "${friendly_name} Radiation Count"
+    #unit_of_measurement: 'CPM'
+    #accuracy_decimals: 0
     count_mode:
       rising_edge: DISABLE
       falling_edge: INCREMENT
     icon: mdi:radioactive
+    update_interval: 1s
+    # internal_filter: 190us
     filters:
-#      - multiply: 0.00812037037037 old
-      - multiply: 0.005966
-
+      - lambda: return x * 1 / 60; 
+    # total one minute cpm
+    total:
+      unit_of_measurement: 'CPM'
+      id: geigercounter_total_cpm
+      internal: True
+            
+  # CPM - template 
+  # only send measure time
   - platform: template
-    name: "${friendly_name} Radiation"
+    name: "${friendly_name} Radiation Count"
+    id: radiation_cpm
     icon: mdi:radioactive
-    
-    accuracy_decimals: 3
+    unit_of_measurement: 'CPM'
+    accuracy_decimals: 0
+    update_interval: never
+    lambda: "return (id (geigercounter_total_cpm).state);"
+    filters:
+      filter_out: nan
+    on_value:
+      then:
+        - sensor.template.publish:
+            id: radiation_power
+            state: !lambda "return (id(radiation_cpm).state * 0.005966);"
 
+  # µSv/h
+  - platform: template
+    name: "${friendly_name} Radiation Power"
+    id: radiation_power
+    icon: mdi:radioactive
+    unit_of_measurement: 'µSv/h'
+    accuracy_decimals: 3
+    filters:
+      filter_out: nan
 
 #-------------------------------------------
 # BINARY SENSORS
 #-------------------------------------------
 binary_sensor:
 #-------------------------------------------
-# Online status
+# Power supply template
 #-------------------------------------------
-  - platform: status
-    name: "${friendly_name} Status"
-#    id: status_online
-#    icon: mdi:access-point-check
-
-#-------------------------------------------
-# Relay
-#-------------------------------------------
-  - platform: gpio
-    pin: 
-      number: "$power_status_pin"
+  - platform: template
     name: "${friendly_name} Power Supply"
     id: power_state
     icon: mdi:power-plug
     entity_category: diagnostic
+    lambda: "return id(power_state_global);"
+
+#-------------------------------------------
+# Deep Sleep binary template 
+#-------------------------------------------
+  - platform: template
+    name: "${friendly_name} Deep Sleep - Prevent"
+    id: deep_sleep_prevent
+    icon: mdi:power-sleep
+    entity_category: config
+
+# Deep Sleep prevent if rain gauge measure rainfall 
+  - platform: gpio
+    pin:
+      number: "$rain_gauge"
+    filters:
+      - delayed_off: 60s
+    name: "${friendly_name} Deep Sleep - Prevent Rainfall"
+    id: deep_sleep_prevent_rainfall
+    icon: mdi:power-sleep
+    publish_initial_state: true
+    entity_category: config
 
 #-------------------------------------------
 # SWITCHES
 #-------------------------------------------
 switch:
 #-------------------------------------------
+# Power Relay switch
+# Polarized power relay latching relay
+#-------------------------------------------
+  - platform: gpio
+    pin: $power_supply_on_pin #25
+    name: "${friendly_name} Power Supply ON"
+    on_turn_on:
+      - delay: 150ms
+      - switch.turn_off: power_supply_on
+      - globals.set:
+          id: power_state_global
+          value: "true"
+    id: power_supply_on
+    entity_category: config
+    icon: mdi:power-plug
+    restore_mode: ALWAYS_OFF
+
+  - platform: gpio
+    pin: $power_supply_off_pin #04
+    name: "${friendly_name} Power Supply OFF"
+    on_turn_on:
+      - delay: 150ms
+      - switch.turn_off: power_supply_off
+      - globals.set:
+          id: power_state_global
+          value: "false"
+    id: power_supply_off
+    entity_category: config
+    icon: mdi:power-plug-off
+    restore_mode: ALWAYS_OFF
+
+#-------------------------------------------
 # Switch - Rain drop - low destruction sensor
 #-------------------------------------------
   - platform: gpio
     id: resistance_bias
-    name: "${friendly_name} Measure Rainfall Drop"
+    name: "${friendly_name} Rainfall Drop - Measure "
     icon: "mdi:waterfall"
     entity_category: config
     pin:
       number: "$raindrop_switch"
       mode: OUTPUT
-      drive_strength: 5mA
+      drive_strength: 10mA
     on_turn_on:
       then:
+        - component.update: rain_drop_adc
+        - delay: 500ms
         - component.update: rain_drop_adc
         - delay: 500ms
         - component.update: rain_drop_adc
@@ -1272,7 +1752,7 @@ switch:
 # CO2 sensor - MHZ19 - Auto Calibrate Baseline
 #-------------------------------------------
   - platform: template
-    name: "${friendly_name} Calibrate MH-Z19"
+    name: "${friendly_name} MH-Z19 - Calibrate ABC"
     icon: mdi:molecule-co2
     optimistic: true
     on_turn_on:
@@ -1287,7 +1767,7 @@ switch:
 # Wiring whit IRFZ44N power mofset
 #-------------------------------------------
   - platform: gpio
-    name: "${friendly_name} Measure PM1006 MQ2"
+    name: "${friendly_name} PM1006 MQ2 - Measure"
     icon: mdi:air-filter
     restore_mode: ALWAYS_OFF
     pin:
@@ -1295,61 +1775,112 @@ switch:
     id: switch_reducer_consumption
     on_turn_on:
       - then:
-          - delay: 100s # wait time to heat mq2 and fan replaces the air
+          - delay: 5s
+          - pulse_counter.set_total_pulses:
+              id: geigercounter
+              value: "0"
+          - delay: 60s # wait time to heat mq2 and fan replaces the air
           # update component 5 time (window size 5)
-          - component.update: smoke
-          - component.update: smoke_raw
+          - component.update: mq2_raw
+          - component.update: particulate_matter
+          - component.update: radiation_cpm
+          - delay: 1s
+          - component.update: mq2_raw
+          - component.update: particulate_matter
+          - component.update: geigercounter
+          - pulse_counter.set_total_pulses:
+              id: geigercounter
+              value: "0"
+          - delay: 1s
+          - component.update: mq2_raw
           - component.update: particulate_matter
           - delay: 1s
-          - component.update: smoke
-          - component.update: smoke_raw
+          - component.update: mq2_raw
           - component.update: particulate_matter
           - delay: 1s
-          - component.update: smoke
-          - component.update: smoke_raw
-          - component.update: particulate_matter
-          - delay: 1s
-          - component.update: smoke
-          - component.update: smoke_raw
-          - component.update: particulate_matter
-          - delay: 1s
-          - component.update: smoke
-          - component.update: smoke_raw
+          - component.update: mq2_raw
           - component.update: particulate_matter
           - delay: 500ms
-          - switch.turn_off: switch_reducer_consumption
+          #- switch.turn_off: switch_reducer_consumption
+          - logger.log: 
+              format: "MEASURE pm1006/mq2/radiation COMPLETE"
+              level: warn
     entity_category: config
 
 #-------------------------------------------
 # Manual update component
 #-------------------------------------------
   - platform: template
-    name: "${friendly_name} Update PM1006, MQ2"
-    icon: mdi:update
+    name: "${friendly_name} PM1006, MQ2 - Update"
+    icon: mdi:air-filter
     turn_on_action:
       - then:
-          - component.update: smoke
+          - component.update: mq2_raw
           - component.update: particulate_matter
           - delay: 1s
-          - component.update: smoke
+          - component.update: mq2_raw
+          - component.update: particulate_matter
+          - component.update: geigercounter
+          - delay: 1s
+          - component.update: mq2_raw
           - component.update: particulate_matter
           - delay: 1s
-          - component.update: smoke
+          - component.update: mq2_raw
           - component.update: particulate_matter
           - delay: 1s
-          - component.update: smoke
+          - component.update: mq2_raw
           - component.update: particulate_matter
-          - delay: 1s
-          - component.update: smoke
-          - component.update: particulate_matter
+          - logger.log: 
+              format: "MANUAL MEASURE pm1006/mq2/radiation COMPLETE"
+              level: warn
     entity_category: config
+
+#-------------------------------------------
+# BUTTONS
+#-------------------------------------------
+button:
+#-------------------------------------------
+# Deep Sleep button
+#-------------------------------------------
+  - platform: template
+    name: "${friendly_name} DeepSleep - Disable"
+    icon: mdi:power-sleep
+    id: deepsleep_switch
+    entity_category: config
+    on_press:
+      then:
+        - binary_sensor.template.publish:
+            id: deep_sleep_prevent
+            state: True
+        - script.stop: deep_sleep_script
+        - logger.log: 
+            format: "SWITCH PREVENT DEEPSLEEP"
+            level: warn
+        - deep_sleep.prevent: deep_sleep_component
+
+#--------------------------------------------
+# MHZ Calibrate zero point
+# Calibrate after 20min in static indoor air 
+#--------------------------------------------
+  - platform: template
+    name: "${friendly_name} MHZ-19 Calibrate Zero"
+    on_press:
+      then:
+        - mhz19.calibrate_zero: mhz19_co2
+    entity_category: config
+
+#-------------------------------------------
+# RESTART
+#-------------------------------------------
+  - platform: restart
+    name: "${friendly_name} Restart"
 
 #-------------------------------------------
 # INTERVALS - Reducer measurement cycling
 #-------------------------------------------
 interval:
   # reducer conumption switch repeat measure
-  - interval: 25min
+  - interval: 15min
     then:
       - switch.turn_on: switch_reducer_consumption
 
@@ -1420,5 +1951,3 @@ light:
     name: "${friendly_name} Led White"
     output: spotlight_output
     icon: mdi:spotlight-beam
-
-
