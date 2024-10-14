@@ -58,14 +58,14 @@ Complete monitoring wheater whit battery power
        - 1x [ESP-32S 2.5€](https://a.aliexpress.com/_mtYXh6i) + [Adapter 0.5€](https://a.aliexpress.com/_mNiOE98)
    - MODULES
        - 1x [MQ-2 Smoke sensor 0.9€](https://a.aliexpress.com/_mqTxVIi)
-       - 1x [BME280 temperature humidity pressure sensor 3.8€](https://www.aliexpress.com/item/32862421810.html)
+       - 1x [BME280 temperature humidity pressure sensor 3.8€](https://www.aliexpress.com/item/32862421810.html) or SHT3 better high humidity reading on BME sensors
        - 1x [MS-WH-SP-RG Rain gauge 17.1€](https://www.aliexpress.com/item/2026877912.html)
        - 1x [MH-RD Raindrop 0.8€](https://www.aliexpress.com/item/1615411920.html)
        - 1x [MHZ19 Intelligent Infrared CO2 Module 22.56€](https://www.aliexpress.com/item/4000212024923.html)
-       - 1x [IKEA VINDRIKTNING Particulate Matter Sensor 11.99€ (SK store)](https://www.ikea.com/sk/sk/p/vindriktning-snimac-kvality-vzduchu-80515910/)
+       - 1x [IKEA VINDRIKTNING Particulate Matter Sensor 11.99€ (SK store)](https://www.ikea.com/sk/sk/p/vindriktning-snimac-kvality-vzduchu-80515910/) or SPS30 better sensor outdoor monitoring
        - 1x [Level shifter 0.4€](https://www.aliexpress.com/item/1005002976498419.html)
        - 1x [GY-302 BH1750 light intensity illumination Sensor 1.10€](https://www.aliexpress.com/item/1005001621873442.html)
-       - 1x [GY-8511 UV Sensor 8.5€](https://www.aliexpress.com/item/32847192530.html)
+       - 1x [GY-8511 UV Sensor 8.5€](https://www.aliexpress.com/item/32847192530.html) or LTR390 senzor replace UV and LUX sensors
        - 1x [WH-SP-WS01 wind speed anemometer]
        - 1x [WH-SP-WD wind direction]
        - 1x [Geiger Counter RadiationD-v1.1-CAJOE 30.0€](https://www.aliexpress.com/item/1005004896319865.html)
