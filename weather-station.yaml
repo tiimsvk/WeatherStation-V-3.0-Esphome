@@ -8,6 +8,7 @@
 # "task_wdt: Task watchdog got triggered. The following tasks did not reset the watchdog in time:" FIX: more sensors ... change id name length to short.
 # add voltage detektor reset mcu supervisor smd
 # aneometer WH-SP-WS01 bad value fixed 2x
+# add weather condition whit pressure
 
 #-------------------------------------------
 # REVISION
@@ -56,6 +57,11 @@
 # 2024.07.19.3.3.9
  # bad value aneomter WH-SP-WS01 reference shmu multiple 2x added
  
+# 2025.08.12.3.4.0
+ # Add UV ADC sensor - GYML8511 replace shield glass to UV Fused Quartz Glass Clear Transparent 
+ # Fixed Geiger counter change GPIO04
+ # update FW and last esphome
+ 
 #-------------------------------------------
 # SUBTITUTIONS - basic definitions and description of the device
 #-------------------------------------------
@@ -83,6 +89,17 @@ substitutions:
     # brig orange : GND
     # dark green  : MHZ RX
     # brig green  : MHZ TX
+    
+# SOLAR SHIELD
+ # LAN cable:
+    # dark brown  : 3V3
+    # brig brown  : GND
+    # dark blue   : UV ADC
+    # brig blue   : not connect
+    # dark orange : SCL
+    # brig orange : SDA
+    # dark green  : not connect
+    # brig green  : RAIN ADC
 
 #-------------------------------------------
 # POWER CONSUMPTION 
@@ -302,7 +319,8 @@ substitutions:
    # Specification: Voltage	5V / Consmption max. 150mA / 600RPM
    # Power consumption: high speed: 150mA / normal speed 100mA / low speed 70mA
    # Circuit: FAN PWM control / switching whit NPN Darlington TIP122: Gate - 220Ω GPIO / Gate-Source 10kΩ pulldown
-  fan_pwm_pin: GPIO19
+  fan_pwm_pin:      GPIO19
+  temp_compensate: "2.5" # °C if solar panel >23°C and illuminance > 25000lx
 
  # ----- RAIN SENSORS -----
   # Module: MS-WH-SP-RG rain gauge
@@ -321,7 +339,7 @@ substitutions:
    # Consumption: standby 0μA / dry 1.4μA / full wet 10mA
   rain_drop: GPIO34
    # increasing the lifetime of raindrops module
-   # Circuit: GPIO-ADCraindrops 10k resistor - GPIO turn on measure ADC pin
+   # Circuit: GPIO-ADCraindrops 10kΩ resistor - GPIO turn on measure ADC pin
   raindrop_switch: GPIO05
    # Variabiles
   resistor_value: "9.9kOhm"   # rain drop resistor
@@ -389,13 +407,6 @@ substitutions:
    # Consumption: normal 4.4mA
    # http://wiki.sunfounder.cc/index.php?title=GY-302_BH1750_Digital_Light_Intensity_Module
 
-  # Module: GYML8511 UV uv light uva uvb ultraviolet 
-   # Specifications: 3V – 5V / Photodiode sensitive to UV-A and UV-B
-   # Circuit: ADC
-   # Consumption: normal 0.455mA
-   # http://wiki.sunfounder.cc/index.php?title=GYML8511_UV_Sensor
-  uv_pin: GPIO35 
-
  # NEW MODULE
   # Module: LTR-390UV Lux and UVA sensor
    # Specifications: Operating voltage: 1.7 ~ 3.6V (max 4.0V) / Operating temperature: - 40 ~ 80 °C / Temperature compesation / Error ALS 25% UV 20%
@@ -418,19 +429,26 @@ substitutions:
     # -----------------------------------------------
     # 0.0001 	          | Moonless, overcast night sky (starlight)[5]
     # 0.002 	          | Moonless clear night sky with airglow[5]
-    # 0.05–0.3 	        | Full moon on a clear night[6]
-    # 3.4 	            | Dark limit of civil twilight under a clear sky[7]
+    # 0.05–0.3 	          | Full moon on a clear night[6]
+    # 3.4 	              | Dark limit of civil twilight under a clear sky[7]
     # 20–50 	          | Public areas with dark surroundings[8]
     # 50 	              | Family living room lights (Australia, 1998)[9]
     # 80 	              | Office building hallway/toilet lighting[10][11]
-    # 100 	            | Very dark overcast day[5]
-    # 150 	            | Train station platforms[12]
-    # 320–500 	        | Office lighting[9][13][14][15]
-    # 400 	            | Sunrise or sunset on a clear day.
-    # 1000 	            | Overcast day;[5] typical TV studio lighting
+    # 100 	              | Very dark overcast day[5]
+    # 150 	              | Train station platforms[12]
+    # 320–500 	          | Office lighting[9][13][14][15]
+    # 400 	              | Sunrise or sunset on a clear day.
+    # 1000 	              | Overcast day;[5] typical TV studio lighting
     # 10,000–25,000 	  | Full daylight (not direct sun)[5]
     # 32,000–100,000 	  | Direct sunlight
 
+  # Module: GYML8511 UV uv light uva uvb ultraviolet 
+   # Specifications: 3V – 5V / Photodiode sensitive to UV-A and UV-B
+   # Circuit: ADC
+   # Consumption: normal 0.455mA
+   # http://wiki.sunfounder.cc/index.php?title=GYML8511_UV_Sensor
+  uv_pin: GPIO35 
+  
  # ----- WIND SENSORS -----
   # Module: WH-SP-WS01 wind speed anemometer
    # Circuit: 10k resitor GPIO to VCC and GPIO 104 capacitor to GND
@@ -473,33 +491,38 @@ substitutions:
    # Consumption: 6.66mA (reducer unmount 2x NE555 timer IC1 and U80 header =  speaker and led)
    # https://esphome.io/cookbook/geiger-counter.html
    # https://www.youtube.com/watch?v=K28Az3-gV7E
-  geiger_pin: GPIO36 # SVP connected to module to VIN pin
-  
-  #-------------------------------------------
-  # Calculate correct value:
-  # Source: https://sites.google.com/site/diygeigercounter/technical/gm-tubes-supported (method 2)
-  # Alert value >0.81uSv/h >100cpm
-  #-------------------------------------------
-   # Tube background:
-   # SBM-20: 32
-   # M4011:  32
-   # J305:   25
-   # J321:   25
    
-  # Gamma Sensitivity Ra226:             27cps/mR/h (SBM-20 = 29, J305 = 44, M4011 = 27             )
-  # Gamma Sensitivity Co60:              22cps/mR/h (                        M4011 = 22, LND712 = 18)
-
-  # Averga isotopes:                     (27+22)/2   = 24.5   CPS / mR/h
-  # Multiply counts per second by 60:    24.5 x 60   = 1470   CPM / mR/h
+#-------------------------------------------
+# Calculate correct value:
+# Source: https://sites.google.com/site/diygeigercounter/technical/gm-tubes-supported (method 2)
+# Alert value >0.81uSv/h >100cpm
+#-------------------------------------------
+ # Tube background:
+  # SBM-20: 32
+  # M4011:  32
+  # J305:   25
+  # J321:   25
+   
+  # Gamma Sensitivity Ra226:             44cps/mR/h (SBM-20 = 29, J305 = 44, M4011 = 27             , J321 = 27(chatgpt 45))
+  # Gamma Sensitivity Co60:              43cps/mR/h (SBM-20 = 23, J305 = 43, M4011 = 22, LND712 = 18, J321 = 22(chatgpt 50))
+  # Gamma Sensitivity CS137:             23cps/mR/h (SBM-20 = 18, J305 = 23, M4011 = ?              , J321 =   (chatgpt 55))
+  # Averga isotopes:                     (45+50+55)/3 = 50     CPS / mR/h
+  # Multiply counts per second by 60:    50 x 60      = 3000   CPM / mR/h
   # absorption rate for air:             8.77 
   # So finally CPM is divided by 
-  # the absorption rate µSv:             1470 / 8.77 = 167.617 µSv/h
-  # inverse multiply filter lambda:      0.00596µSv
+  # the absorption rate µSv:             3000 / 8.77 = 342.075µSv/h
+  # inverse multiply filter lambda:      0.00292µSv
+   # https://devices.esphome.io/devices/geiger-counter (65cps/(μR/s)) : factor: 0.00812037037037 and -12 background offset (this is simillar value as above).  
 
-  ra226:      "27.0"
-  co60:       "22.0"
+  ra226: "45.0"
+  co60:  "50.0"
+  cs137: "55.0"
+
   air_absorp: "8.77"
-  # Final formula: 1 / ((((ra226 + co60) / 2) * 60) / air_absorption)
+  # Final formula: 1 / ((((ra226 + co60 + cs137) / 3) * 60) / air_absorption)
+  
+  geiger_pin: GPIO04 # SVP connected to module to VIN pin
+  
 
  # ----- CHARGING -----
   # Module: Solar panel 18V
@@ -516,7 +539,7 @@ substitutions:
   c_uvindex: "80.0" # for a direct sunny world
   
   # Temperature reel feels
-   # Heat Index > 27°C
+  # Heat Index > 27°C
    # HI = (−42.379 + 2.04901523 * T + 10.14333127 * RH − 0.22475541 * T * RH − 0.00683783 * T² − 0.05481717 * RH² + 0.00122874 * T² * RH + 0.00085282 * T * RH² − 0.00000199 * T² * RH²) + (Fsun * solar radiation)
   c1: "-42.379"
   c2: "2.04901523"
@@ -528,27 +551,30 @@ substitutions:
   c8: "0.00085282"
   c9: "0.00000199"
   
-  # T: temperature
-  # RH: humidity
+   # T: temperature
+   # RH: humidity
   f_sun: "0.02" # coeficient 0.01 -0.03
    
-   # Wind Chill < 10°C
+  # Wind Chill < 10°C
    # WCI = (13.12 + 0.6215  * T − 11.37 * v^0.16 + 0.3965 * T * v^0.16) + (Fsun * solar radiation)
   c10: "13.12"
   c11: "0.6215"
   c12: "11.37"
   c13: "0.3965"
   
-  # T: temperature
-  # v: wind speed
+   # T: temperature
+   # v: wind speed
   
   # > 10°C < 27°C
-  # Tpocit = T + Cv * v + CRH * RH + Csun * solar radiation
-  # T: temperature
-  # v: wind speed  je rýchlosť vetra 
+   # Tpocit = T + Cv * v + CRH * RH + Csun * solar radiation
+   # T: temperature
+   # v: wind speed  je rýchlosť vetra 
   c_v:   "-0.05"   # -0.5 °C pri vetre 10 km/h
   c_rh:  "0.01"   # 0.1 °C za každých 10 % vlhkosti
   c_sun: "0.0003" # 0.03 °C za každých 100 W/m²
+
+  # Australian realfeel
+  rain_compensate: "1.0" #°C - rain sensor: 80-0kΩ temperature compensate 0-2.3°C
 
   # Module: Charger Step Down XL4015 E1 
    # Specification: Voltage in: 4V ~ 37V out: 1.25V ~ 36V 5A efficiency: ~96% (current standby 20mA) / ABOVE INPUT HEADER FIRST current regulator clockwise increase, second voltage regulator clockwise increase
@@ -639,7 +665,12 @@ one_wire:
 # https://github.com/esphome/feature-requests/issues/2385
 #-------------------------------------------
 external_components:
-  - source: custom_component
+  - source: 
+      type: local
+      path: custom_component
+    components:
+      - sps30
+      - sht4x
 
 #-------------------------------------------
 # ESP - MAIN SETTINGS
@@ -648,7 +679,7 @@ esphome:
   name: weather-station
   project:
     name: "studiotiim.weather_station"
-    version: 2024.04.3.3.7
+    version: 2025.08.3.4.0
   platformio_options:
     board_build.f_cpu: 160000000L # set cpu clock 160mhz
   on_boot:
@@ -720,17 +751,17 @@ esphome:
         - logger.log: Shutdown Called
         #- switch.turn_off: i2c_enable
         # reduce leaking current when enable deep sleep
-        - lambda: |-
-            esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
-            esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
-            esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF); 
-            // This config is large power consumption +80uA
-            //gpio_deep_sleep_hold_en();
-            //adc_power_release();
-            //gpio_hold_en((gpio_num_t) 12);
-            // i2c enable high impedancy
-            //pinMode(21, INPUT);
-            //pinMode(22, INPUT);
+        #- lambda: |-
+        #    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
+        #    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
+        #    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF); 
+        #    // This config is large power consumption +80uA
+        #    //gpio_deep_sleep_hold_en();
+        #    //adc_power_release();
+        #    //gpio_hold_en((gpio_num_t) 12);
+        #    // i2c enable high impedancy
+        #    //pinMode(21, INPUT);
+        #    //pinMode(22, INPUT);
 
     - priority: -801.0 # tested more settings the server does not always receive the value
       then:
@@ -1011,81 +1042,93 @@ sensor:
 # UV and Ambient Light
 # LTR-390
 #-------------------------------------------
-  - platform: ltr390
-    ambient_light:
-      name: "Illuminance - ALS"
-      unit_of_measurement: "count"
-      accuracy_decimals: 0
-    light:
-      name: "Illuminance"
-      accuracy_decimals: 0
-      id: lux_sensor
+  - platform:                   ltr390
+    ambient_light:             
+      name:                    "Illuminance - ALS"
+      unit_of_measurement:     "count"
+      accuracy_decimals:        0
+    light:                     
+      name:                    "Illuminance"
+      accuracy_decimals:        0
+      id:                       lux_sensor
+      filters:                 
+        - offset:              -1.0
+        - lambda:              'return max((float)0.0, x);'
+    uv:                        
+      name:                    "UV - Count 2"
+      unit_of_measurement:     "count"
+    uv_index:                  
+      name:                    "UV - Index 2"
+      accuracy_decimals:        2
+      id:                       uv_sensor
       filters:
-        - offset: -1.0
-        - lambda: 'return max((float)0.0, x);'
-    uv:
-      name: "UV - Count"
-      unit_of_measurement: "count"
-    uv_index:
-      name: "UV - Index"
-      accuracy_decimals: 2
-      id: uv_sensor
-      #filters:
-        #multiply: 24.0
-    update_interval: 10s
+        - median:
+            window_size:   5
+            send_every:    5
+            send_first_at: 5
+            
+        #- multiply: 1.32
+        #- calibrate_linear:
+        #    method: exact
+        #    datapoints:
+        #      - 0.0 -> 0.0
+        #      - 3.5 -> 1.0
+        #      - 4.5 -> 2.0
+        #      - 7.0 -> 8.0
+    update_interval: 2s
+    window_correction_factor: 1.3
     gain:
       ambient_light: X1
-      uv: X18
+      uv:            X9 # see note in esphome docs
     resolution:
-      ambient_light: 18
-      uv: 16
+      ambient_light: 20
+      uv:            13 # see note in esphome docs
 
-    #resolution: 16 
-    #gain: X6
+
 #-------------------------------------------
 # UV index - GUVA-S12SD
 #-------------------------------------------
-#  - platform: adc
-#    id: adcuv
-#    pin: "$uv_pin"
-#    attenuation: 11dB
-#    name: "${friendly_name} UV Intensity"
-    #update_interval: "$update_time" # bug ready below
-    #update_interval: 1s # test value
-#    update_interval: never
-#    filters:
-      #- lambda: 'return max((float)0.99, x);' # original in datasheet minimum 0.99
-#      - lambda: 'return max((float)1.03, x);'  # measure more time min. 0.99-1.03
-#      - lambda: 'return min((float)2.8, x);'
-#    unit_of_measurement: 'mW/cm²'
-#    on_value:
-#      then:
-#        component.update: uv_index
-#    icon: 'mdi:sunglasses'
+  - platform: adc
+    id: adcuv
+    pin: "$uv_pin"
+    attenuation: 12dB
+    name: "UV - Intensity"
+   #update_interval: "$update_time" # bug ready below
+    update_interval: 2s # test value
+   #update_interval: never
+    #filters:
+     #- lambda: 'return max((float)0.99, x);' # original in datasheet minimum 0.99
+     # - lambda: 'return max((float)1.03, x);'  # measure more time min. 0.99-1.03
+     # - lambda: 'return min((float)2.8, x);'
+    #unit_of_measurement: 'mW/cm²'
+    #on_value:
+    #  then:
+    #    component.update: uv_index
+    icon: 'mdi:sunglasses'
 
-#  - platform: template
-#    name: "${friendly_name} UV Index"
-#    id: uv_index
-#    lambda: |-
-#       return ((id(adcuv).state - 1.03) * (15.0 - 0.0) / (2.8 - 1.0) + 0.0);
-#       // return ((id(adcuv).state - 0.99) * (15.0 - 0.0) / (2.8 - 0.99) + 0.0);
-    # corecct factor +0.3
-#    update_interval: "never"
-#    unit_of_measurement: "UV index"
-#    icon: 'mdi:sunglasses'
-#    filters:
-#      - calibrate_polynomial:
-#         degree: 3
-#         datapoints:
-#          # calibrate whit hydrometeorology institute still measure and calibrate sensor not final 
-#          - 0.0 -> 0.0
-#          - 0.1 -> 0.0
-#          - 0.2 -> 0.0
-#          - 1.4 -> 5.0
-#          - 3.5 -> 8.0
-#          - 10.0 -> 14.5
-#          - 15.0 -> 15.0
-#      - lambda: 'return max((float)0, x);'
+  #- platform: template
+  #  name: "UV - Index"
+  #  id: uv_index
+  #  lambda: |-
+  #     return ((id(adcuv).state - 1.03) * (15.0 - 0.0) / (2.8 - 1.0) + 0.0);
+  #     // return ((id(adcuv).state - 0.99) * (15.0 - 0.0) / (2.8 - 0.99) + 0.0);
+  # # corecct factor +0.3
+  #  update_interval: "never"
+  #  unit_of_measurement: "UV index"
+  #  icon: 'mdi:sunglasses'
+  #  filters:
+  #    - calibrate_polynomial:
+  #       degree: 3
+  #       datapoints:
+  #        # calibrate whit hydrometeorology institute still measure and calibrate sensor not final 
+  #        - 0.0 -> 0.0
+  #        - 0.1 -> 0.0
+  #        - 0.2 -> 0.0
+  #        - 1.4 -> 5.0
+  #        - 3.5 -> 8.0
+  #        - 10.0 -> 14.5
+  #        - 15.0 -> 15.0
+  #    - lambda: 'return max((float)0, x);'
 
 #-------------------------------------------
 # LUX sensor - BH1750
@@ -1226,7 +1269,7 @@ sensor:
           condition: 
             sensor.in_range:
               id: temp_sol
-              above: 30.0
+              above: 25.0
           then: 
             - fan.turn_on:
                 id: shield_fan
@@ -1327,6 +1370,46 @@ sensor:
     id: sht45
 
 #-------------------------------------------
+# Template - Temperature humidity pressure
+# component update manually control whit fan and temperature solar panel
+#-------------------------------------------
+  - platform: template
+    name: "Temperature"
+    id: temp_t
+    update_interval: never
+    unit_of_measurement: "°C"
+    icon: "mdi:thermometer"
+    lambda: |-
+      // Skontrolujeme, či sú všetky potrebné senzory dostupné
+      if (isnan(id(temp_sol).state) || isnan(id(lux_sensor).state)) {
+      // Ak niektorý senzor nie je dostupný, vráti sa hodnota temp_t bez kompenzácie
+        return id(temp_g);
+      }
+      float kompenzacia = 0.0;
+      
+      if (id(lux_sensor).state >= 10000) {
+        // Lineárna interpolácia od 23 °C do 35 °C s kompenzáciou od 0 do -2
+        if (id(temp_sol).state > 23.0) {
+          kompenzacia = (id(temp_sol).state - 23.0) * (-${temp_compensate} / (35.0 - 23.0));
+          if (kompenzacia < -${temp_compensate}) {
+            kompenzacia = -${temp_compensate}; // Maximálna kompenzácia -2 °C
+          }
+        }
+      }
+      
+      // Dodatočná kompenzácia, ak je teplota 10 °C, pripočíta sa 1 °C
+      float vysledna_teplota = id(temp_g) + kompenzacia;
+      if (id(temp_s).state <= 10.0) {
+        vysledna_teplota += 1.0;
+      }
+      
+      return vysledna_teplota;
+
+    #lambda: "return id(temp_g);"
+    device_class: temperature
+    state_class: measurement
+    
+#-------------------------------------------
 # Template - Altitude
 # FIX STANDARD_SEA_LEVEL_PRESSURE
 #-------------------------------------------
@@ -1367,6 +1450,7 @@ sensor:
   - platform: template
     id: dewpoint
     name: "Temperature - Dew Point"
+    device_class: temperature
     lambda: |-
       return (243.5*(log(id(humi_s).state/100)+((17.67*id(temp_s).state)/
       (243.5+id(temp_s).state)))/(17.67-log(id(humi_s).state/100)-
@@ -1377,19 +1461,7 @@ sensor:
 #    lambda: |-
 #      return (id(temperature_sensor).state - (100 - id(humidity_sensor).state) / 5);  
 
-#-------------------------------------------
-# Template - Temperature humidity pressure
-# component update manually control whit fan and temperature solar panel
-#-------------------------------------------
-  - platform: template
-    name: "Temperature"
-    id: temp_t
-    update_interval: never
-    unit_of_measurement: "°C"
-    icon: "mdi:thermometer"
-    lambda: "return id(temp_g);"
-    device_class: temperature
-    
+   
   - platform: template
     name: "Pressure"
     id: pres_t
@@ -1418,11 +1490,11 @@ sensor:
     device_class: temperature
     lambda: |-
       // Heat Index > 27°C
-      if (id(temp_t).state > 27)      { return (${c1} + ${c2} * id(temp_t).state + ${c3} * id(humi_t).state - ${c4} * id(temp_t).state * id(humi_t).state - ${c5} * pow(id(temp_t).state, 2) - ${c6} * pow(id(humi_t).state, 2) + ${c7} * pow(id(temp_t).state, 2) * id(humi_t).state + ${c8} * id(temp_t).state * pow(id(humi_t).state, 2) - ${c9} * pow(id(temp_t).state, 2) * pow(id(humi_t).state, 2)) + (${f_sun} * id(solar_radia).state); }
+      if (id(temp_t).state > 27)                                     { return (${c1} + ${c2} * id(temp_t).state + ${c3} * id(humi_t).state - ${c4} * id(temp_t).state * id(humi_t).state - ${c5} * pow(id(temp_t).state, 2) - ${c6} * pow(id(humi_t).state, 2) + ${c7} * pow(id(temp_t).state, 2) * id(humi_t).state + ${c8} * id(temp_t).state * pow(id(humi_t).state, 2) - ${c9} * pow(id(temp_t).state, 2) * pow(id(humi_t).state, 2)) + (${f_sun} * id(solar_radia).state); }
       // Wind Chill < 10°C
-      else if (id(temp_t).state < 10) { return (${c10} + ${c11}  * id(temp_t).state - ${c12} * pow(id(windspeed).state, 0.16) + ${c13} * id(temp_t).state * pow(id(windspeed).state, 0.16)) + (${f_sun} * id(solar_radia).state);}
+      else if (id(temp_t).state < 10 && id(wind_average).state >= 5) { return (${c10} + ${c11}  * id(temp_t).state - ${c12} * pow(id(wind_average).state, 0.16) + ${c13} * id(temp_t).state * pow(id(wind_average).state, 0.16)) + (${f_sun} * id(solar_radia).state) * 0.1;}
       // > 10°C < 27°C
-      else                            { return id(temp_t).state + ${c_v} * id(windspeed).state + ${c_rh} * id(humi_t).state + ${c_sun} * id(solar_radia).state ;}
+      else                                                           { return id(temp_t).state + ${c_v} * id(wind_average).state + ${c_rh} * id(humi_t).state + ${c_sun} * id(solar_radia).state ;}
   
   # Temperature reel feels
   - platform: template
@@ -1433,9 +1505,19 @@ sensor:
     icon: "mdi:thermometer"
     device_class: temperature
     lambda: |-
-      float e = (id(humi_t).state / 100.0) * 6.105 * exp((17.27 * id(temp_t).state) / (id(temp_t).state + 237.7));
-      float feel_temp = id(temp_t).state + (0.348 * e) - (0.70 * id(windspeed).state) - 4.25 + 0.7 * (id(solar_radia).state / (id(windspeed).state + 10));
-      return feel_temp;
+      float temp = isnan(id(temp_t).state) ? 20.0 : id(temp_t).state;
+      float humi = isnan(id(humi_t).state) ? 50.0 : id(humi_t).state;
+      float wind = isnan(id(wind_average).state) ? 0.0 : id(wind_average).state;
+      float solar = isnan(id(solar_radia).state) ? 0.0 : id(solar_radia).state;
+      float rain = isnan(id(rain_res).state) ? 0.0 : id(rain_res).state;
+
+      float e = (humi / 100.0) * 6.105 * exp((17.27 * temp) / (temp + 237.7));
+      float feel_temp = temp + (0.348 * e) - (0.70 * (wind / 3.6)) - 4.25 + 
+                        0.7 * ((solar * 0.07) / ((wind / 3.6) + 10)) - 
+                        ((- $rain_compensate / 80 ) * rain + $rain_compensate);
+      return isnan(feel_temp) ? 0.0 : feel_temp;  // Ak je výsledok stále nan, nastaví 0.0
+    state_class: measurement
+      
 #-------------------------------------------
 # Wind Speed - WH-SP-WS01
 #
@@ -1521,14 +1603,32 @@ sensor:
                   id: windspeed
                   state: !lambda 'return 0.0;'
     # device_class: wind_speed
+    
   - platform: template
     name: "Wind Speed Average"
     id: wind_average 
     device_class: wind_speed
+    state_class: measurement
     lambda: return id(windspeed_raw).state;
     unit_of_measurement: 'km/h'
+    update_interval: never
     filters:
       - throttle_average: 90s
+
+#-------------------------------------------
+# Wind speed Max
+#-------------------------------------------
+  - platform: template
+    id: windspeed_max
+    name: "Wind - Speed Gust"
+    update_interval: never
+    device_class: wind_speed
+    state_class: measurement
+    unit_of_measurement: 'km/h'
+    icon: mdi:weather-windy
+    filters:
+      - filter_out: 60.1
+      - filter_out: 60.0
       
 #-------------------------------------------
 # Beaufort scale
@@ -1729,20 +1829,6 @@ sensor:
             - sensor.template.publish:
                 id: wind_number
                 state: 13.0
-
-#-------------------------------------------
-# Wind speed Max
-#-------------------------------------------
-  - platform: template
-    id: windspeed_max
-    name: "Wind - Speed Gust"
-    update_interval: never
-    device_class: wind_speed
-    unit_of_measurement: 'km/h'
-    icon: mdi:weather-windy
-    filters:
-      - filter_out: 60.1
-      - filter_out: 60.0
 
 #-------------------------------------------
 # Wind direction - WH-SP-WD
@@ -2189,7 +2275,7 @@ sensor:
     update_interval: never
     entity_category: diagnostic
     unit_of_measurement: "h"
-    device_class: battery
+    #device_class: battery
     id: bat_charg_time
     icon: mdi:battery-clock
     filters:
@@ -2286,7 +2372,7 @@ sensor:
 
 #-------------------------------------------
 # Pulse counter - Geiger module 
-
+# OLD:
 # Correct value:
 # >0.81 >100cpm alert
 # calculate tube m4011, mounted J321 
@@ -2301,21 +2387,25 @@ sensor:
 #-------------------------------------------
   # CPM
   - platform: pulse_counter
-    pin: "$geiger_pin"
+    pin: 
+      number: "$geiger_pin"
+      #allow_other_uses: true
     id: geigercount
-    internal: true
-    #name: "${friendly_name} Radiation Count"
+    # internal: true
+    name: "${friendly_name} Radiation Count Raw"
     #unit_of_measurement: 'CPM'
     #accuracy_decimals: 0
+    filters:
+      - lambda: return x * (1.0/60.0);
     count_mode:
       rising_edge: DISABLE
       falling_edge: INCREMENT
     icon: mdi:radioactive
     update_interval: $update_time
-    # internal_filter: 190us
-    filters:
-      #- lambda: return x * 1 / 60; 
-    # total one minute cpm
+    #update_interval: 1ms
+    internal_filter: 250us #190us
+    use_pcnt: False
+
     total:
       unit_of_measurement: 'CPM'
       id: geigercount_total
@@ -2327,17 +2417,19 @@ sensor:
     name: "Radiation - Count"
     id: radiation_cpm
     icon: mdi:radioactive
-    unit_of_measurement: 'CPM'
+    unit_of_measurement: 'cpm'
     accuracy_decimals: 0
     update_interval: never
     lambda: "return (id (geigercount_total).state);"
     filters:
-      filter_out: nan
+      - filter_out: nan
+      #- offset: "-15.0"
+      - lambda: 'return max((float)0.0, x);'
     on_value:
       then:
         - sensor.template.publish:
             id: radiation_pow
-            state: !lambda "return (id(radiation_cpm).state * 0.005966);"
+            state: !lambda "return ((1 / (((($ra226 + $co60 + $cs137) / 3) * 60) / $air_absorp)) * id(radiation_cpm).state);"
 
   # µSv/h
   - platform: template
@@ -2348,6 +2440,17 @@ sensor:
     accuracy_decimals: 3
     filters:
       filter_out: nan
+    on_value_range:
+      - above: 0.8
+        then:
+          - binary_sensor.template.publish:
+              id:    sleep_prevent_radiation
+              state: true
+      - below: 0.8
+        then:
+          - binary_sensor.template.publish:
+              id:    sleep_prevent_radiation
+              state: false
 
 #-------------------------------------------
 # Rain drops sensor MH-RD Raindrops
@@ -2405,6 +2508,7 @@ sensor:
                   and:
                     - binary_sensor.is_off: sleep_prevent
                     - binary_sensor.is_off: sleep_prevent_rain
+                    - binary_sensor.is_off: sleep_prevent_radiation
                 then:
                   - script.execute: sleep_script
                 else:
@@ -2413,6 +2517,7 @@ sensor:
                         or:
                           - binary_sensor.is_on: sleep_prevent
                           - binary_sensor.is_on: sleep_prevent_rain
+                          - binary_sensor.is_on: sleep_prevent_radiation
                       then:
                         - script.stop: sleep_script
                         - deep_sleep.prevent: sleep_component
@@ -2532,15 +2637,15 @@ sensor:
     accuracy_decimals: 2
     update_interval: never
 
-  - platform: total_daily_energy
-    name: 'Total Daily Rain'
-    power_id: rain_gauge
-    unit_of_measurement: 'mm'
-    state_class: total_increasing
-    device_class: energy
-    accuracy_decimals: 3
-    filters:
-      lambda: return 1/0.2794;  # cca 3.5 pulses per mm
+#  - platform: total_daily_energy
+#    name: 'Total Daily Rain'
+#    power_id: rain_gauge
+#    unit_of_measurement: 'mm'
+#    state_class: total_increasing
+    #device_class: energy
+#    accuracy_decimals: 3
+#    filters:
+#      lambda: return 1/0.2794;  # cca 3.5 pulses per mm
 
     #expire_after: 60s
     
@@ -2595,24 +2700,37 @@ binary_sensor:
         - delay: 100ms
         - lambda: id(sleep_prevent_rain).publish_state(false);
 
-# Deep Sleep prevent if rain gauge measure rainfall 
+  #-------------------------------------------
+  # Deep Sleep RAIN binary template 
+  #-------------------------------------------
   - platform: template
     filters:
       - delayed_off: 30s
     name: "Deep Sleep - Prevent Rain"
     id: sleep_prevent_rain
     icon: mdi:power-sleep
-    publish_initial_state: False
+    trigger_on_initial_state: False
+    entity_category: diagnostic
+  #-------------------------------------------
+  # Deep Sleep RADIATION binary template 
+  #-------------------------------------------
+  - platform: template
+    filters:
+      - delayed_off: 30s
+    name: "Deep Sleep - Prevent Radiation"
+    id: sleep_prevent_radiation
+    icon: mdi:power-sleep
+    trigger_on_initial_state: False
     entity_category: diagnostic
 
-#-------------------------------------------
-# Deep Sleep binary template 
-#-------------------------------------------
+  #-------------------------------------------
+  # Deep Sleep binary template 
+  #-------------------------------------------
   - platform: template
     name: "Deep Sleep - Prevent"
     id: sleep_prevent
     icon: mdi:power-sleep
-    publish_initial_state: true
+    trigger_on_initial_state: true
     entity_category: diagnostic
 
 #-------------------------------------------
@@ -2745,10 +2863,11 @@ switch:
     on_turn_on:
       - then:
           - delay: 500ms
+          # EDIT
           - pulse_counter.set_total_pulses:
               id: geigercount
               value: "0"
-          #- component.update: adcuv
+
           - delay: 75s # wait time to heat mq2 and fan replaces the air
           # update component 5 time (window size 5)
           #- wifi.enable:
@@ -2758,10 +2877,13 @@ switch:
           - delay: 1s
           - component.update: mqx_raw
           #- component.update: particulate_matter
+
+          #  EDIT
           - component.update: geigercount
           - pulse_counter.set_total_pulses:
               id: geigercount
               value: "0"
+
           - delay: 1s
           - component.update: mqx_raw
           #- component.update: particulate_matter
@@ -2793,7 +2915,9 @@ switch:
           - delay: 1s
           - component.update: mqx_raw
           #- component.update: particulate_matter
+          # EDIT
           - component.update: geigercount
+
           - delay: 1s
           - component.update: mqx_raw
           #- component.update: particulate_matter
